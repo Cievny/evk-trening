@@ -216,7 +216,14 @@
         <div class="section-title">Základné informácie</div>
         <div class="row2">
           <div class="field"><label>Dátum</label><input type="date" id="f-date" required></div>
-          <div class="field"><label>Operatér</label><input type="text" id="f-doctor" placeholder="Meno"></div>
+          <div class="field"><label>Operatér</label>
+            <select id="f-doctor">
+              <option value="">— vybrať —</option>
+              <option>Dr. Kocán</option>
+              <option>Dr. Piš</option>
+              <option>Dr. Nemec</option>
+            </select>
+          </div>
         </div>
         <div class="field">
           <label>Typ procedúry</label>
