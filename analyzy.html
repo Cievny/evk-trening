@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vaskulárny Tréning — Analýzy</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2333;--border:#2a3050;
+  --accent:#4fd1c5;--accent2:#f6ad55;--text:#e2e8f0;--muted:#718096;
+  --danger:#fc8181;--success:#68d391;--purple:#a78bfa;--radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;min-height:100vh;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Fraunces',serif;font-size:20px;font-weight:300;color:var(--accent);}
+.logo span{color:var(--muted);font-size:11px;display:block;font-family:'DM Mono',monospace;margin-top:2px;letter-spacing:.1em;text-transform:uppercase;}
+nav{display:flex;gap:6px;}
+.nav-btn{padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;transition:all .15s;}
+.nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.nav-btn.active{background:rgba(79,209,197,.1);border-color:var(--accent);color:var(--accent);}
+.nav-btn.evk{border-color:var(--accent2);color:var(--accent2);}
+.nav-btn.evk:hover{background:rgba(246,173,85,.1);}
+.db-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+.db-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.db-dot.connected{background:var(--success);}
+
+/* TABS */
+.tab-bar{max-width:1200px;margin:0 auto;padding:20px 24px 0;display:flex;gap:4px;border-bottom:1px solid var(--border);}
+.tab{padding:9px 20px;border-radius:6px 6px 0 0;border:1px solid transparent;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;color:var(--muted);background:transparent;transition:all .15s;border-bottom:none;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);margin-bottom:-1px;}
+.tab.t-dash.active{color:var(--accent);}
+.tab.t-doc.active{color:var(--accent2);}
+.tab.t-cong.active{color:var(--purple);}
+
+.container{max-width:1200px;margin:0 auto;padding:24px;}
+
+/* FILTER ROW */
+.filter-row{display:flex;gap:12px;margin-bottom:22px;align-items:center;flex-wrap:wrap;}
+.filter-row label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;}
+select.filter{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 10px;outline:none;appearance:none;}
+select.filter:focus{border-color:var(--accent);}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+.kpi-num{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:var(--accent);line-height:1;}
+.kpi-num.orange{color:var(--accent2);}.kpi-num.green{color:var(--success);}.kpi-num.red{color:var(--danger);}.kpi-num.purple{color:var(--purple);}
+.kpi-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-top:5px;}
+.kpi-sub{color:var(--muted);font-size:11px;margin-top:3px;}
+
+/* PANEL */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;}
+.panel-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ph-left{display:flex;align-items:center;gap:8px;}
+.panel-header h2{font-family:'Fraunces',serif;font-weight:300;font-size:14px;color:var(--text);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.panel-body{padding:18px;}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+
+.ch{position:relative;height:200px;}
+.ch-md{position:relative;height:260px;}
+.ch-lg{position:relative;height:320px;}
+
+/* TABLE */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.score{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;font-size:11px;font-weight:500;}
+.sh{background:rgba(104,211,145,.2);color:var(--success);}
+.sm{background:rgba(246,173,85,.2);color:var(--accent2);}
+.sl{background:rgba(252,129,129,.2);color:var(--danger);}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:500;white-space:nowrap;}
+.bg{background:rgba(104,211,145,.15);color:var(--success);}
+.br{background:rgba(252,129,129,.15);color:var(--danger);}
+.by{background:rgba(246,173,85,.15);color:var(--accent2);}
+.bb{background:rgba(79,209,197,.15);color:var(--accent);}
+.bp{background:rgba(167,139,250,.15);color:var(--purple);}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:12px;}
+
+/* ===== DOCTOR PROFILE ===== */
+#doc-view{display:none;}
+
+.doc-selector-bar{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 24px;margin-bottom:22px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.doc-selector-bar h3{font-family:'Fraunces',serif;font-weight:300;font-size:16px;color:var(--text);}
+select.doc-select{
+  background:var(--surface2);border:1px solid var(--accent);border-radius:8px;
+  color:var(--text);font-family:'DM Mono',monospace;font-size:14px;
+  padding:8px 14px;outline:none;appearance:none;min-width:200px;
+}
+
+.doc-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:22px;
+  display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;
+}
+.doc-avatar{
+  width:64px;height:64px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-size:26px;font-weight:300;color:var(--bg);
+  flex-shrink:0;
+}
+.doc-info h2{font-family:'Fraunces',serif;font-weight:300;font-size:22px;color:var(--text);margin-bottom:4px;}
+.doc-info .meta{color:var(--muted);font-size:11px;letter-spacing:.05em;}
+.doc-info .tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+
+.doc-kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:22px;}
+.doc-kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;text-align:center;}
+.doc-kpi-num{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:var(--accent);line-height:1;}
+.doc-kpi-num.orange{color:var(--accent2);}
+.doc-kpi-num.green{color:var(--success);}
+.doc-kpi-num.red{color:var(--danger);}
+.doc-kpi-num.purple{color:var(--purple);}
+.doc-kpi-label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;}
+
+/* Competency meter */
+.competency-bar{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 24px;margin-bottom:22px;
+}
+.competency-bar h3{font-family:'Fraunces',serif;font-weight:300;font-size:14px;color:var(--text);margin-bottom:14px;}
+.comp-item{margin-bottom:14px;}
+.comp-item:last-child{margin-bottom:0;}
+.comp-label{display:flex;justify-content:space-between;margin-bottom:5px;}
+.comp-label span{font-size:11px;color:var(--muted);}
+.comp-label strong{font-size:12px;color:var(--text);}
+.comp-track{background:var(--surface2);border-radius:6px;height:8px;overflow:hidden;}
+.comp-fill{height:100%;border-radius:6px;transition:width .6s ease;}
+
+/* Feedback timeline */
+.feedback-timeline{display:flex;flex-direction:column;gap:12px;}
+.fb-item{
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:12px;
+}
+.fb-date{color:var(--muted);font-size:10px;white-space:nowrap;text-align:right;padding-top:2px;}
+.fb-content{}
+.fb-proc{font-size:11px;color:var(--accent);margin-bottom:4px;}
+.fb-scores{display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+.fb-text{font-size:12px;color:var(--text);line-height:1.5;border-left:2px solid var(--accent);padding-left:10px;margin-top:6px;}
+
+/* Comparison badges */
+.vs-avg{font-size:10px;margin-left:6px;}
+.vs-avg.better{color:var(--success);}
+.vs-avg.worse{color:var(--danger);}
+.vs-avg.same{color:var(--muted);}
+
+/* ===== CONGRESS ===== */
+#cong-view{display:none;}
+.cong-header{text-align:center;padding:32px 24px 24px;border-bottom:2px solid var(--border);margin-bottom:32px;}
+.cong-header h1{font-family:'Fraunces',serif;font-size:22px;font-weight:300;color:var(--text);margin-bottom:8px;}
+.cong-header .meta{color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase;}
+.cong-header .sub{color:var(--accent);font-size:12px;margin-top:6px;}
+.cong-sec{margin-bottom:36px;}
+.cong-sec-title{font-family:'Fraunces',serif;font-weight:600;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.fig-lbl{color:var(--muted);font-size:10px;background:var(--surface2);padding:2px 8px;border-radius:4px;border:1px solid var(--border);}
+.ctable{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:12px;}
+.ctable thead th{background:var(--surface2);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border);}
+.ctable td{padding:9px 16px;border-bottom:1px solid var(--border);color:var(--text);}
+.ctable tr:last-child td{border-bottom:none;}
+.ctable .sec-row td{background:rgba(79,209,197,.05);color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:6px 16px;border-bottom:1px solid var(--border);}
+.cong-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.cong-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;}
+.stat-box .big{font-family:'Fraunces',serif;font-size:36px;font-weight:600;color:var(--accent);line-height:1;}
+.stat-box .big.green{color:var(--success);}.stat-box .big.orange{color:var(--accent2);}.stat-box .big.purple{color:var(--purple);}
+.stat-box .slbl{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-top:6px;}
+.stat-box .sci{color:var(--muted);font-size:10px;margin-top:3px;}
+.cpanel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.cpanel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.cpanel-title{font-family:'Fraunces',serif;font-weight:300;font-size:13px;color:var(--text);}
+.cpanel-fig{font-size:10px;color:var(--muted);margin-left:auto;}
+.cpanel-body{padding:16px;}
+.footnote{font-size:10px;color:var(--muted);margin-top:8px;font-style:italic;}
+.print-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:1px solid var(--purple);background:transparent;color:var(--purple);font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;}
+.print-btn:hover{background:rgba(167,139,250,.1);}
+
+@media print{
+  body{background:white!important;color:black!important;font-size:11px;}
+  header,.tab-bar,nav,.filter-row,.print-btn,#dash-view,#doc-view{display:none!important;}
+  #cong-view{display:block!important;}
+  :root{--bg:white;--surface:white;--surface2:#f8f8f8;--border:#ddd;--text:#111;--muted:#666;--accent:#0d9488;--accent2:#d97706;--success:#15803d;--danger:#b91c1c;}
+}
+@media(max-width:900px){
+  .kpi-row,.doc-kpi-row{grid-template-columns:repeat(2,1fr);}
+  .g2,.g3,.cong-2col,.cong-3col{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Vaskulárny Tréning <span>EVK Analytický prehľad</span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="db-status"><div class="db-dot" id="db-dot"></div><span id="db-label">Pripájam...</span></div>
+    <nav>
+      <a class="nav-btn" href="index.html">⟵ Záznamy</a>
+      <a class="nav-btn active" href="#">📊 Analýzy</a>
+      <a class="nav-btn evk" href="https://www.cievny.sk/tools/EVK/" target="_blank">↗ EVK formulár</a>
+    </nav>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab t-dash active" onclick="showTab('dash',this)">📊 Dashboard</button>
+  <button class="tab t-doc" onclick="showTab('doc',this)">👤 Profil lekára</button>
+  <button class="tab t-cong" onclick="showTab('cong',this)">📄 Kongresový report</button>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="dash-view" class="container">
+  <div class="filter-row">
+    <label>Operatér:</label>
+    <select class="filter" id="f-doctor" onchange="applyFilters()"><option value="">Všetci</option></select>
+    <label>Anatómia:</label>
+    <select class="filter" id="f-anatomy" onchange="applyFilters()">
+      <option value="">Všetky</option>
+      <option>Aortoiliakálna</option><option>Femoropopliiteálna</option>
+      <option>Infraplopliteálna</option><option>Kombinovaná (multi-level)</option>
+    </select>
+    <label>Obdobie:</label>
+    <select class="filter" id="f-period" onchange="applyFilters()">
+      <option value="all">Všetko</option>
+      <option value="30">30 dní</option><option value="90">90 dní</option>
+      <option value="180">6 mes.</option><option value="365">1 rok</option>
+    </select>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-num" id="k-total">—</div><div class="kpi-label">Celkom procedúr</div></div>
+    <div class="kpi"><div class="kpi-num green" id="k-tech">—</div><div class="kpi-label">Tech. úspech</div><div class="kpi-sub" id="k-tech-s"></div></div>
+    <div class="kpi"><div class="kpi-num red" id="k-comp">—</div><div class="kpi-label">Komplikácie</div><div class="kpi-sub" id="k-comp-s"></div></div>
+    <div class="kpi"><div class="kpi-num orange" id="k-abi">—</div><div class="kpi-label">△ ABI priemer</div><div class="kpi-sub" id="k-abi-s"></div></div>
+    <div class="kpi"><div class="kpi-num purple" id="k-fp">—</div><div class="kpi-label">First-pass vpich</div><div class="kpi-sub" id="k-fp-s"></div></div>
+  </div>
+
+  <div class="g2" style="grid-template-columns:2fr 1fr">
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Skóre v čase</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-timeline"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Rutherford</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-ruth"></canvas></div></div></div>
+  </div>
+  <div class="g3">
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Anatómia</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-anat"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--success)"></div><h2>Intervencie</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-iv"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--danger)"></div><h2>Komplikácie</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-comp"></canvas></div></div></div>
+  </div>
+  <div class="g2">
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--success)"></div><h2>ABI — pred vs. po</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-abi"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Uzatváracie zariadenia</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-closure"></canvas></div></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Prehľad podľa operatéra</h2></div></div>
+    <div class="panel-body" style="padding:0"><div class="tw"><table>
+      <thead><tr><th>Operatér</th><th>n</th><th>Tech. úspech</th><th>Priem. R.</th><th>△ ABI</th><th>Vpich ø</th><th>Uzáver ø</th><th>Komp.</th><th></th></tr></thead>
+      <tbody id="t-docs"></tbody>
+    </table></div></div>
+  </div>
+</div>
+
+<!-- ========== DOCTOR PROFILE ========== -->
+<div id="doc-view" class="container">
+
+  <div class="doc-selector-bar">
+    <h3>Profil lekára</h3>
+    <select class="doc-select" id="doc-select" onchange="renderDocProfile()">
+      <option value="">— vybrať lekára —</option>
+    </select>
+    <span style="color:var(--muted);font-size:11px" id="doc-period-note"></span>
+  </div>
+
+  <div id="doc-content" style="display:none">
+
+    <!-- Card -->
+    <div class="doc-card" id="doc-card">
+      <div class="doc-avatar" id="doc-avatar"></div>
+      <div class="doc-info">
+        <h2 id="doc-name-h"></h2>
+        <div class="meta" id="doc-meta"></div>
+        <div class="tags" id="doc-tags"></div>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="doc-kpi-row">
+      <div class="doc-kpi"><div class="doc-kpi-num" id="d-n">—</div><div class="doc-kpi-label">Procedúry</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num green" id="d-ts">—</div><div class="doc-kpi-label">Tech. úspech</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num orange" id="d-as">—</div><div class="doc-kpi-label">Ø Skóre vpich</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num orange" id="d-cs">—</div><div class="doc-kpi-label">Ø Skóre uzáver</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num purple" id="d-pt">—</div><div class="doc-kpi-label">Ø Čas punkcie</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num red" id="d-cp">—</div><div class="doc-kpi-label">Komplikácie</div></div>
+    </div>
+
+    <!-- Competency bars -->
+    <div class="competency-bar">
+      <h3>Kompetenčný profil</h3>
+      <div id="comp-bars"></div>
+    </div>
+
+    <!-- Learning curve + Score trend -->
+    <div class="g2">
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--purple)"></div><h2>Learning curve — CUSUM</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="d-cusum"></canvas></div></div></div>
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Vývoj skóre v čase</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="d-score-trend"></canvas></div></div></div>
+    </div>
+
+    <!-- Rutherford + Anatomy handled -->
+    <div class="g2">
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Rutherford distribúcia</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-ruth"></canvas></div></div></div>
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Anatomické lokality</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-anat"></canvas></div></div></div>
+    </div>
+
+    <!-- vs Group avg -->
+    <div class="panel" style="margin-bottom:18px">
+      <div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--success)"></div><h2>Porovnanie s priemerom skupiny</h2></div></div>
+      <div class="panel-body"><div class="ch-md"><canvas id="d-radar"></canvas></div></div>
+    </div>
+
+    <!-- Feedback timeline -->
+    <div class="panel">
+      <div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>História spätnej väzby</h2></div></div>
+      <div class="panel-body">
+        <div class="feedback-timeline" id="d-feedback-list"></div>
+      </div>
+    </div>
+
+    <!-- Procedure log -->
+    <div class="panel">
+      <div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--muted)"></div><h2>Záznamy procedúr</h2></div></div>
+      <div class="panel-body" style="padding:0"><div class="tw"><table>
+        <thead><tr><th>Dátum</th><th>Typ</th><th>R.</th><th>Anatómia</th><th>ABI △</th><th>Vpich</th><th>Uzáver</th><th>Úspech</th><th>Komp.</th></tr></thead>
+        <tbody id="d-proc-log"></tbody>
+      </table></div></div>
+    </div>
+
+  </div><!-- doc-content -->
+  <div id="doc-empty" style="text-align:center;padding:80px;color:var(--muted)">
+    <div style="font-size:40px;margin-bottom:12px">👤</div>
+    <div>Vyberte lekára zo zoznamu vyššie</div>
+  </div>
+</div>
+
+<!-- ========== CONGRESS ========== -->
+<div id="cong-view" class="container">
+  <div class="cong-header">
+    <h1>Endovaskulárny tréning — Analýza výsledkov</h1>
+    <div class="meta">Vaskulárna chirurgia · Výukové pracovisko</div>
+    <div class="sub" id="cong-date"></div>
+    <div style="margin-top:16px"><button class="print-btn" onclick="window.print()">🖨 Tlačiť / Uložiť PDF</button></div>
+  </div>
+
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Table 1</span>Charakteristika súboru a základné výsledky</div>
+    <table class="ctable" id="c-table1"></table>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Key metrics</span>Kľúčové výsledky</div>
+    <div class="cong-3col" id="c-key"></div>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Figure 1</span>Learning curve — CUSUM analýza</div>
+    <div class="cpanel">
+      <div class="cpanel-header"><div class="cpanel-title">Kumulatívna suma (CUSUM) — technický úspech výkonov</div><div class="cpanel-fig">Fig. 1</div></div>
+      <div class="cpanel-body"><div style="height:300px"><canvas id="c-cusum"></canvas></div>
+      <p class="footnote">CUSUM: klesajúci trend = zlepšenie. Každý neúspech +1, každý úspech −1. Prekročenie nulovej línie = dosiahnutie kompetencie.</p></div>
+    </div>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Figure 2</span>Technický úspech podľa anatomickej lokalizácie a Rutherforda</div>
+    <div class="cong-2col">
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Tech. úspech (%) — anatómia</div><div class="cpanel-fig">Fig. 2a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-sanat"></canvas></div></div></div>
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Tech. úspech (%) — Rutherford</div><div class="cpanel-fig">Fig. 2b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-sruth"></canvas></div></div></div>
+    </div>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Figure 3</span>Hemodynamický výsledok — ABI</div>
+    <div class="cong-2col">
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">ABI pred vs. po (priemer ± SD)</div><div class="cpanel-fig">Fig. 3a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-abi"></canvas></div></div></div>
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">△ ABI podľa anatomickej lokalizácie</div><div class="cpanel-fig">Fig. 3b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-abi-anat"></canvas></div></div></div>
+    </div>
+    <p class="footnote">ABI: ankle-brachial index. Hodnoty prezentované ako priemer ± štandardná odchýlka (SD).</p>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Figure 4</span>Čas punkcie a výsledky uzáveru</div>
+    <div class="cong-2col">
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Čas do úspešnej punkcie — trend</div><div class="cpanel-fig">Fig. 4a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-ptime"></canvas></div></div></div>
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Úspešnosť uzáveru podľa zariadenia (%)</div><div class="cpanel-fig">Fig. 4b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-clos"></canvas></div></div></div>
+    </div>
+  </div>
+  <div class="cong-sec">
+    <div class="cong-sec-title"><span class="fig-lbl">Table 2</span>Peri-procedurálne komplikácie</div>
+    <table class="ctable" id="c-table2"></table>
+    <p class="footnote" style="margin-top:8px">Komplikácie klasifikované podľa EVK štandardu. n (%) z celkového počtu výkonov.</p>
+  </div>
+</div>
+
+<script>
+const SURL='https://jjsfabokyyvfmsbjvkkv.supabase.co';
+const SKEY='sb_publishable_asuF-oROdX9B74WzzwKtRQ_6zaf8MGp';
+const {createClient}=supabase;
+const db=createClient(SURL,SKEY);
+
+let all=[],filtered=[],charts={};
+let activeTab='dash';
+
+Chart.defaults.color='#718096';
+Chart.defaults.borderColor='#2a3050';
+Chart.defaults.font.family="'DM Mono',monospace";
+Chart.defaults.font.size=11;
+
+const C={
+  teal:a=>`rgba(79,209,197,${a})`,
+  orange:a=>`rgba(246,173,85,${a})`,
+  green:a=>`rgba(104,211,145,${a})`,
+  red:a=>`rgba(252,129,129,${a})`,
+  muted:a=>`rgba(113,128,150,${a})`,
+  purple:a=>`rgba(167,139,250,${a})`,
+};
+const PAL=[C.teal(.8),C.orange(.8),C.green(.8),C.red(.8),C.muted(.8),C.purple(.8)];
+
+// Utils
+function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:null;}
+function sdv(a){if(a.length<2)return null;const m=avg(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1));}
+function pct(n,t){return t?Math.round(n/t*100):0;}
+function f1(n){return n!=null?n.toFixed(1):'—';}
+function f2(n){return n!=null?n.toFixed(2):'—';}
+function ci95(p,n){
+  if(!n||p==null)return '';
+  const z=1.96,pp=p/100;
+  const lo=Math.max(0,(pp+z*z/(2*n)-z*Math.sqrt(pp*(1-pp)/n+z*z/(4*n*n)))/(1+z*z/n));
+  const hi=Math.min(1,(pp+z*z/(2*n)+z*Math.sqrt(pp*(1-pp)/n+z*z/(4*n*n)))/(1+z*z/n));
+  return `(95% CI: ${(lo*100).toFixed(0)}–${(hi*100).toFixed(0)} %)`;
+}
+function sc(s){return s>=8?'sh':s>=5?'sm':'sl';}
+function mk(id,cfg){
+  if(charts[id])charts[id].destroy();
+  const el=document.getElementById(id);
+  if(!el)return;
+  charts[id]=new Chart(el.getContext('2d'),cfg);
+}
+
+// Init
+async function init(){
+  const{data,error}=await db.from('PROCEDURES').select('*').order('date',{ascending:true});
+  if(error){document.getElementById('db-dot').className='db-dot';document.getElementById('db-label').textContent='Chyba';return;}
+  document.getElementById('db-dot').className='db-dot connected';
+  document.getElementById('db-label').textContent='Supabase pripojené';
+  all=data||[];
+  populateFilters();
+  applyFilters();
+}
+
+function populateFilters(){
+  const docs=[...new Set(all.map(r=>r.doctor).filter(Boolean))].sort();
+  const sel=document.getElementById('f-doctor');
+  const dsel=document.getElementById('doc-select');
+  docs.forEach(d=>{
+    [sel,dsel].forEach(s=>{const o=document.createElement('option');o.value=d;o.textContent=d;s.appendChild(o);});
+  });
+}
+
+function applyFilters(){
+  const doc=document.getElementById('f-doctor').value;
+  const anat=document.getElementById('f-anatomy').value;
+  const period=parseInt(document.getElementById('f-period').value)||0;
+  const cutoff=period?new Date(Date.now()-period*86400000).toISOString().slice(0,10):null;
+  filtered=all.filter(r=>{
+    if(doc&&r.doctor!==doc)return false;
+    if(anat&&r.anatomy!==anat)return false;
+    if(cutoff&&r.date<cutoff)return false;
+    return true;
+  });
+  if(activeTab==='dash'){updateKPIs();drawDash();drawDoctorTable();}
+  if(activeTab==='cong')drawCongress();
+}
+
+function showTab(tab,el){
+  activeTab=tab;
+  ['dash','doc','cong'].forEach(t=>{
+    document.getElementById(t+'-view').style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='dash'){updateKPIs();drawDash();drawDoctorTable();}
+  if(tab==='doc')renderDocProfile();
+  if(tab==='cong')drawCongress();
+}
+
+// ===== KPIs =====
+function updateKPIs(){
+  const n=filtered.length;
+  document.getElementById('k-total').textContent=n;
+  const withTS=filtered.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const ok=filtered.filter(r=>r.technical_success===true).length;
+  document.getElementById('k-tech').textContent=ok;
+  document.getElementById('k-tech-s').textContent=withTS.length?`${pct(ok,withTS.length)} % z ${withTS.length}`:'';
+  const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
+  document.getElementById('k-comp').textContent=comps.length;
+  document.getElementById('k-comp-s').textContent=n?`${pct(comps.length,n)} % procedúr`:'';
+  const diffs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre);
+  const da=avg(diffs);
+  document.getElementById('k-abi').textContent=da!=null?(da>=0?'+':'')+da.toFixed(2):'—';
+  document.getElementById('k-abi-s').textContent=diffs.length?`n=${diffs.length}`:'';
+  const wp=filtered.filter(r=>r.puncture_time_min!=null);
+  const fp=wp.filter(r=>r.puncture_time_min<=2).length;
+  document.getElementById('k-fp').textContent=wp.length?`${pct(fp,wp.length)} %`:'—';
+  document.getElementById('k-fp-s').textContent=wp.length?`n=${wp.length}`:'';
+}
+
+// ===== DASHBOARD CHARTS =====
+function drawDash(){
+  // Timeline
+  const bd={};
+  filtered.forEach(r=>{if(!r.date)return;if(!bd[r.date])bd[r.date]={a:[],c:[]};if(r.access_score)bd[r.date].a.push(r.access_score);if(r.closure_score)bd[r.date].c.push(r.closure_score);});
+  const lbs=Object.keys(bd).sort();
+  mk('ch-timeline',{type:'line',data:{labels:lbs,datasets:[
+    {label:'Vpich',data:lbs.map(d=>avg(bd[d].a)),borderColor:C.teal(1),backgroundColor:C.teal(.1),tension:.35,pointRadius:4,fill:true},
+    {label:'Uzáver',data:lbs.map(d=>avg(bd[d].c)),borderColor:C.orange(1),backgroundColor:C.orange(.1),tension:.35,pointRadius:4,fill:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:10,grid:{color:'#2a3050'}},x:{grid:{color:'#2a3050'}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
+
+  // Rutherford
+  mk('ch-ruth',{type:'bar',data:{labels:['0','1','2','3','4','5','6'],datasets:[{data:[0,1,2,3,4,5,6].map(i=>filtered.filter(r=>r.rutherford===i).length),backgroundColor:[C.teal(.7),C.teal(.6),C.orange(.5),C.orange(.7),C.red(.6),C.red(.8),C.red(1)],borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#2a3050'},ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
+
+  // Anatomy
+  const anKeys=['Aortoiliakálna','Femoropopliiteálna','Infraplopliteálna','Kombinovaná (multi-level)'];
+  mk('ch-anat',{type:'doughnut',data:{labels:anKeys.map(k=>k.split(' ')[0]),datasets:[{data:anKeys.map(k=>filtered.filter(r=>r.anatomy===k).length),backgroundColor:PAL,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e2e8f0',boxWidth:10,font:{size:10}}}}}});
+
+  // Interventions
+  const ivs=['PTA','Stenting','Aterektómia','Trombektómia','Kissing stent','CERAB','Stent-graft'];
+  mk('ch-iv',{type:'bar',data:{labels:ivs,datasets:[{data:ivs.map(iv=>filtered.filter(r=>r.interventions&&r.interventions.includes(iv)).length),backgroundColor:C.green(.7),borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},ticks:{stepSize:1}},x:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}});
+
+  // Complications
+  const cTypes=['Hematóm','Pseudoaneuryzma','Perforácia','Spazmus','Trombóza','Distálna embólia'];
+  mk('ch-comp',{type:'bar',data:{labels:cTypes,datasets:[{data:cTypes.map(t=>filtered.filter(r=>r.complications&&r.complications.includes(t)).length),backgroundColor:C.red(.7),borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},ticks:{stepSize:1}},x:{grid:{display:false},ticks:{font:{size:9}}}},plugins:{legend:{display:false}}}});
+
+  // ABI
+  const pairs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
+  mk('ch-abi',{type:'bar',data:{labels:pairs.map((r,i)=>r.date||'#'+(i+1)),datasets:[
+    {label:'Pred',data:pairs.map(r=>r.abi_pre),backgroundColor:C.muted(.6),borderRadius:4,borderWidth:0},
+    {label:'Po',data:pairs.map(r=>r.abi_post),backgroundColor:C.green(.7),borderRadius:4,borderWidth:0}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:1.5,grid:{color:'#2a3050'}},x:{grid:{display:false},ticks:{font:{size:9}}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
+
+  // Closure device
+  const devs=[...new Set(filtered.map(r=>r.closure_type).filter(Boolean))];
+  mk('ch-closure',{type:'bar',data:{labels:devs,datasets:[{data:devs.map(d=>{const rs=filtered.filter(r=>r.closure_type===d);const ok=rs.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;return rs.length?Math.round(ok/rs.length*100):0;}),backgroundColor:PAL,borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}});
+}
+
+function drawDoctorTable(){
+  const byDoc={};
+  filtered.forEach(r=>{
+    const k=r.doctor||'(neuvedený)';
+    if(!byDoc[k])byDoc[k]={n:0,ts:0,tsN:0,ruth:[],abiD:[],aS:[],cS:[],comps:0};
+    byDoc[k].n++;
+    if(r.technical_success!==null&&r.technical_success!==undefined){byDoc[k].tsN++;if(r.technical_success)byDoc[k].ts++;}
+    if(r.rutherford!=null)byDoc[k].ruth.push(r.rutherford);
+    if(r.abi_pre!=null&&r.abi_post!=null)byDoc[k].abiD.push(r.abi_post-r.abi_pre);
+    if(r.access_score)byDoc[k].aS.push(r.access_score);
+    if(r.closure_score)byDoc[k].cS.push(r.closure_score);
+    if(r.complications&&r.complications.length&&!r.complications.includes('Žiadne'))byDoc[k].comps++;
+  });
+  const tb=document.getElementById('t-docs');
+  if(!Object.keys(byDoc).length){tb.innerHTML=`<tr><td colspan="9" class="empty">Žiadne dáta</td></tr>`;return;}
+  tb.innerHTML=Object.entries(byDoc).sort((a,b)=>b[1].n-a[1].n).map(([doc,d])=>{
+    const tp=d.tsN?pct(d.ts,d.tsN):null;
+    const ra=avg(d.ruth);const aa=avg(d.abiD);const asc=avg(d.aS);const csc=avg(d.cS);
+    return `<tr>
+      <td style="font-weight:500">${doc}</td><td>${d.n}</td>
+      <td><span class="badge ${tp!=null&&tp>=80?'bg':tp!=null?'by':''}">${tp!=null?tp+' %':'—'}</span></td>
+      <td>${ra!=null?`<span style="color:var(--accent2)">${f1(ra)}</span>`:'—'}</td>
+      <td style="color:${aa!=null?(aa>=0?'var(--success)':'var(--danger)'):'var(--muted)'}">${aa!=null?(aa>=0?'+':'')+f2(aa):'—'}</td>
+      <td>${asc!=null?`<span class="score ${sc(Math.round(asc))}">${f1(asc)}</span>`:'—'}</td>
+      <td>${csc!=null?`<span class="score ${sc(Math.round(csc))}">${f1(csc)}</span>`:'—'}</td>
+      <td><span class="badge ${d.comps>0?'br':'bg'}">${d.comps}</span></td>
+      <td><button onclick="jumpToDoc('${doc}')" style="background:rgba(79,209,197,.1);border:1px solid var(--border);color:var(--accent);border-radius:5px;padding:3px 8px;font-size:10px;cursor:pointer;font-family:'DM Mono',monospace">Profil →</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function jumpToDoc(name){
+  document.getElementById('doc-select').value=name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector('.t-doc').classList.add('active');
+  showTab('doc',document.querySelector('.t-doc'));
+}
+
+// ===== DOCTOR PROFILE =====
+function renderDocProfile(){
+  const name=document.getElementById('doc-select').value;
+  document.getElementById('doc-content').style.display=name?'block':'none';
+  document.getElementById('doc-empty').style.display=name?'none':'block';
+  if(!name)return;
+
+  const recs=[...all].filter(r=>r.doctor===name).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const n=recs.length;
+  if(!n)return;
+
+  // Avatar & card
+  const initials=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('doc-avatar').textContent=initials;
+  document.getElementById('doc-name-h').textContent=name;
+  const first=recs[0]?.date,last=recs[recs.length-1]?.date;
+  document.getElementById('doc-meta').textContent=`${n} procedúr · ${first||'?'} – ${last||'?'}`;
+
+  // Tags
+  const anatomies=[...new Set(recs.map(r=>r.anatomy).filter(Boolean))];
+  const ivAll=[...new Set(recs.flatMap(r=>r.interventions||[]))];
+  document.getElementById('doc-tags').innerHTML=[
+    ...anatomies.map(a=>`<span class="badge bb">${a.split(' ')[0]}</span>`),
+    ...ivAll.slice(0,4).map(iv=>`<span class="badge bp">${iv}</span>`)
+  ].join('');
+
+  // KPIs
+  const withTS=recs.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const tsOk=recs.filter(r=>r.technical_success===true).length;
+  const aScores=recs.map(r=>r.access_score).filter(Boolean);
+  const cScores=recs.map(r=>r.closure_score).filter(Boolean);
+  const ptimes=recs.map(r=>r.puncture_time_min).filter(Boolean);
+  const comps=recs.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
+
+  document.getElementById('d-n').textContent=n;
+  document.getElementById('d-ts').textContent=withTS.length?`${pct(tsOk,withTS.length)} %`:'—';
+  document.getElementById('d-as').textContent=f1(avg(aScores));
+  document.getElementById('d-cs').textContent=f1(avg(cScores));
+  document.getElementById('d-pt').textContent=ptimes.length?f1(avg(ptimes))+' min':'—';
+  document.getElementById('d-cp').textContent=comps.length?`${pct(comps.length,n)} %`:'0 %';
+
+  // Group averages for comparison
+  const gAS=all.map(r=>r.access_score).filter(Boolean);
+  const gCS=all.map(r=>r.closure_score).filter(Boolean);
+  const gTS=all.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const gTSOk=all.filter(r=>r.technical_success===true).length;
+  const gPT=all.map(r=>r.puncture_time_min).filter(Boolean);
+  const gAvgAS=avg(gAS)||0,gAvgCS=avg(gCS)||0;
+  const gTSPct=gTS.length?pct(gTSOk,gTS.length):0;
+  const gAvgPT=avg(gPT)||0;
+
+  // Competency bars
+  const docAvgAS=avg(aScores)||0,docAvgCS=avg(cScores)||0;
+  const docTSPct=withTS.length?pct(tsOk,withTS.length):0;
+  const docAvgPT=avg(ptimes)||99;
+  const bars=[
+    {label:'Skóre vpich',val:docAvgAS,max:10,color:'var(--accent)',fmt:f1(docAvgAS)+'/10',vsAvg:docAvgAS-gAvgAS},
+    {label:'Skóre uzáver',val:docAvgCS,max:10,color:'var(--accent2)',fmt:f1(docAvgCS)+'/10',vsAvg:docAvgCS-gAvgCS},
+    {label:'Technický úspech',val:docTSPct,max:100,color:'var(--success)',fmt:docTSPct+'%',vsAvg:docTSPct-gTSPct},
+    {label:'Čas punkcie (nižší = lepší)',val:Math.max(0,10-docAvgPT),max:10,color:'var(--purple)',fmt:f1(docAvgPT)+' min',vsAvg:-(docAvgPT-gAvgPT)},
+  ];
+  document.getElementById('comp-bars').innerHTML=bars.map(b=>{
+    const w=Math.min(100,Math.round(b.val/b.max*100));
+    const vs=b.vsAvg;
+    const vsHtml=vs!=null?`<span class="vs-avg ${Math.abs(vs)<0.3?'same':vs>0?'better':'worse'}">${vs>0?'▲':'▼'} ${Math.abs(vs).toFixed(1)} vs. skupina</span>`:'';
+    return `<div class="comp-item">
+      <div class="comp-label"><strong>${b.label} ${vsHtml}</strong><span>${b.fmt}</span></div>
+      <div class="comp-track"><div class="comp-fill" style="width:${w}%;background:${b.color}"></div></div>
+    </div>`;
+  }).join('');
+
+  // CUSUM
+  let cusum=0;
+  const cusumData=recs.filter(r=>r.technical_success!==null&&r.technical_success!==undefined).map((r,i)=>{cusum+=r.technical_success?-1:1;return{x:i+1,y:cusum};});
+  mk('d-cusum',{type:'line',data:{datasets:[
+    {label:'CUSUM',data:cusumData,borderColor:C.purple(1),backgroundColor:C.purple(.1),tension:.2,pointRadius:3,fill:true,borderWidth:2},
+    {label:'Hranica',data:[{x:0,y:0},{x:recs.length+1,y:0}],borderColor:C.red(.8),borderDash:[6,4],pointRadius:0,fill:false,borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{type:'linear',title:{display:true,text:'Poradie výkonu',color:'#718096'},grid:{color:'#2a3050'}},y:{title:{display:true,text:'CUSUM',color:'#718096'},grid:{color:'#2a3050'}}},plugins:{legend:{display:false}}}});
+
+  // Score trend
+  mk('d-score-trend',{type:'line',data:{labels:recs.map((_,i)=>i+1),datasets:[
+    {label:'Vpich',data:recs.map(r=>r.access_score||null),borderColor:C.teal(1),backgroundColor:C.teal(.1),tension:.3,pointRadius:4,fill:false,spanGaps:true},
+    {label:'Uzáver',data:recs.map(r=>r.closure_score||null),borderColor:C.orange(1),backgroundColor:C.orange(.1),tension:.3,pointRadius:4,fill:false,spanGaps:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:10,grid:{color:'#2a3050'}},x:{grid:{display:false}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
+
+  // Rutherford
+  mk('d-ruth',{type:'bar',data:{labels:['0','1','2','3','4','5','6'],datasets:[{data:[0,1,2,3,4,5,6].map(i=>recs.filter(r=>r.rutherford===i).length),backgroundColor:[C.teal(.7),C.teal(.6),C.orange(.5),C.orange(.7),C.red(.6),C.red(.8),C.red(1)],borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false}},y:{grid:{color:'#2a3050'},ticks:{stepSize:1}}},plugins:{legend:{display:false}}}});
+
+  // Anatomy
+  const anK=['Aortoiliakálna','Femoropopliiteálna','Infraplopliteálna','Kombinovaná (multi-level)'];
+  mk('d-anat',{type:'doughnut',data:{labels:anK.map(k=>k.split(' ')[0]),datasets:[{data:anK.map(k=>recs.filter(r=>r.anatomy===k).length),backgroundColor:PAL,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e2e8f0',boxWidth:10,font:{size:10}}}}}});
+
+  // Radar vs group
+  const radarLabels=['Vpich','Uzáver','Tech. úspech','Rýchlosť punkcie','Bez komplikácií'];
+  const compRate=n?100-pct(comps.length,n):100;
+  const gCompRate=all.length?100-pct(all.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne')).length,all.length):100;
+  const gAllTS=all.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const gAllTSOk=all.filter(r=>r.technical_success===true).length;
+  const gAllTSPct=gAllTS.length?pct(gAllTSOk,gAllTS.length):0;
+  const gPTAvg=avg(all.map(r=>r.puncture_time_min).filter(Boolean))||5;
+  const normPT=v=>Math.min(10,Math.max(0,10-(v-1)))*10;
+  mk('d-radar',{type:'radar',data:{labels:radarLabels,datasets:[
+    {label:name,data:[(docAvgAS/10)*100,(docAvgCS/10)*100,docTSPct,normPT(avg(ptimes)||5),compRate],borderColor:C.teal(1),backgroundColor:C.teal(.15),pointBackgroundColor:C.teal(1),borderWidth:2},
+    {label:'Skupina',data:[(gAvgAS/10)*100,(gAvgCS/10)*100,gAllTSPct,normPT(gPTAvg),gCompRate],borderColor:C.muted(.8),backgroundColor:C.muted(.1),pointBackgroundColor:C.muted(.8),borderWidth:2,borderDash:[4,4]}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'#2a3050'},pointLabels:{color:'#e2e8f0',font:{size:11}}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
+
+  // Feedback timeline
+  const fbRecs=recs.filter(r=>r.feedback).reverse();
+  document.getElementById('d-feedback-list').innerHTML=fbRecs.length
+    ?fbRecs.map(r=>`<div class="fb-item">
+        <div class="fb-date">${r.date||'—'}</div>
+        <div class="fb-content">
+          <div class="fb-proc">${r.procedure_type||'—'} · ${r.anatomy||''}</div>
+          <div class="fb-scores">
+            ${r.access_score?`<span class="score ${sc(r.access_score)}" title="Vpich">${r.access_score}</span>`:''}
+            ${r.closure_score?`<span class="score ${sc(r.closure_score)}" title="Uzáver">${r.closure_score}</span>`:''}
+            ${r.technical_success===true?`<span class="badge bg">✓ Úspech</span>`:r.technical_success===false?`<span class="badge br">✕ Neúspech</span>`:''}
+            ${r.rutherford!=null?`<span class="badge by">R${r.rutherford}</span>`:''}
+          </div>
+          <div class="fb-text">${r.feedback}</div>
+        </div>
+      </div>`).join('')
+    :`<div class="empty">Žiadna spätná väzba zatiaľ</div>`;
+
+  // Procedure log
+  document.getElementById('d-proc-log').innerHTML=recs.map(r=>{
+    const abiDelta=r.abi_pre!=null&&r.abi_post!=null?r.abi_post-r.abi_pre:null;
+    const hasComp=r.complications&&r.complications.filter(c=>c!=='Žiadne').length>0;
+    return `<tr>
+      <td style="color:var(--muted);white-space:nowrap">${r.date||'—'}</td>
+      <td style="font-size:11px;max-width:120px">${r.procedure_type||'—'}</td>
+      <td>${r.rutherford!=null?`<span style="color:var(--accent2);font-weight:600">${r.rutherford}</span>`:'—'}</td>
+      <td style="font-size:11px">${r.anatomy?r.anatomy.split(' ')[0]:'—'}</td>
+      <td style="color:${abiDelta!=null?(abiDelta>=0?'var(--success)':'var(--danger)'):'var(--muted)'}">${abiDelta!=null?(abiDelta>=0?'+':'')+abiDelta.toFixed(2):'—'}</td>
+      <td>${r.access_score?`<span class="score ${sc(r.access_score)}">${r.access_score}</span>`:'—'}</td>
+      <td>${r.closure_score?`<span class="score ${sc(r.closure_score)}">${r.closure_score}</span>`:'—'}</td>
+      <td>${r.technical_success===true?`<span class="badge bg">✓</span>`:r.technical_success===false?`<span class="badge br">✕</span>`:'—'}</td>
+      <td>${hasComp?`<span class="badge br">${r.complications.filter(c=>c!=='Žiadne').join(', ')}</span>`:`<span class="badge bg">—</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== CONGRESS =====
+function drawCongress(){
+  const now=new Date().toLocaleDateString('sk-SK',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('cong-date').textContent=`Generované: ${now} · n = ${filtered.length} procedúr`;
+  buildTable1();buildKeyStats();
+  drawCUSUM_c();drawSAnat();drawSRuth();
+  drawABI_c();drawABIAnat();drawPtime();drawClosure_c();
+  buildTable2();
+}
+
+function buildTable1(){
+  const n=filtered.length;
+  const withTS=filtered.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const ok=filtered.filter(r=>r.technical_success===true).length;
+  const aS=filtered.map(r=>r.access_score).filter(Boolean);
+  const cS=filtered.map(r=>r.closure_score).filter(Boolean);
+  const pt=filtered.map(r=>r.puncture_time_min).filter(Boolean);
+  const rv=filtered.map(r=>r.rutherford).filter(v=>v!=null);
+  const ap=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
+  const diffs=ap.map(r=>r.abi_post-r.abi_pre);
+  const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
+  const clOk=filtered.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;
+  const clN=filtered.filter(r=>r.closure_result).length;
+
+  const rows=[
+    {s:'Súbor'},
+    {l:'Celkový počet procedúr',v:`${n}`},
+    {l:'Počet operatérov',v:`${new Set(filtered.map(r=>r.doctor).filter(Boolean)).size}`},
+    {l:'Obdobie',v:filtered.filter(r=>r.date).length?`${filtered.filter(r=>r.date)[0].date} – ${[...filtered].reverse().find(r=>r.date)?.date||'?'}`:'—'},
+    {s:'Klinická charakteristika'},
+    {l:'Rutherford — priemer ± SD',v:rv.length?`${f1(avg(rv))} ± ${f1(sdv(rv))}`:'—'},
+    {l:'Kritická končatinová ischémia (R ≥ 4)',v:rv.length?`${filtered.filter(r=>r.rutherford>=4).length} (${pct(filtered.filter(r=>r.rutherford>=4).length,n)} %)`:'—'},
+    {s:'Technický výsledok'},
+    {l:'Technický úspech',v:withTS.length?`${ok}/${withTS.length} (${pct(ok,withTS.length)} %) ${ci95(pct(ok,withTS.length),withTS.length)}`:'—'},
+    {l:'Peri-procedurálne komplikácie',v:`${comps.length}/${n} (${pct(comps.length,n)} %)`},
+    {l:'Úspešné uzavretie',v:clN?`${clOk}/${clN} (${pct(clOk,clN)} %)`:'—'},
+    {s:'Vaskulárny prístup'},
+    {l:'Čas punkcie — priemer ± SD (min)',v:pt.length?`${f1(avg(pt))} ± ${f1(sdv(pt))}`:'—'},
+    {l:'Čas punkcie — medián (min)',v:pt.length?`${[...pt].sort((a,b)=>a-b)[Math.floor(pt.length/2)]}`:'—'},
+    {l:'Skóre vpich — priemer ± SD',v:aS.length?`${f1(avg(aS))} ± ${f1(sdv(aS))}`:'—'},
+    {s:'Uzáver'},
+    {l:'Skóre uzáver — priemer ± SD',v:cS.length?`${f1(avg(cS))} ± ${f1(sdv(cS))}`:'—'},
+    {s:'Hemodynamický výsledok'},
+    {l:'ABI pred — priemer ± SD',v:ap.length?`${f2(avg(ap.map(r=>r.abi_pre)))} ± ${f2(sdv(ap.map(r=>r.abi_pre)))}`:'—'},
+    {l:'ABI po — priemer ± SD',v:ap.length?`${f2(avg(ap.map(r=>r.abi_post)))} ± ${f2(sdv(ap.map(r=>r.abi_post)))}`:'—'},
+    {l:'△ ABI — priemer ± SD',v:diffs.length?`${(avg(diffs)>=0?'+':'')+f2(avg(diffs))} ± ${f2(sdv(diffs))}`:'—'},
+  ];
+  document.getElementById('c-table1').innerHTML=`<thead><tr><th style="width:55%">Parameter</th><th>Hodnota</th></tr></thead><tbody>${rows.map(r=>r.s?`<tr class="sec-row"><td colspan="2">${r.s}</td></tr>`:`<tr><td style="color:var(--muted)">${r.l}</td><td style="font-weight:500">${r.v}</td></tr>`).join('')}</tbody>`;
+}
+
+function buildKeyStats(){
+  const n=filtered.length;
+  const withTS=filtered.filter(r=>r.technical_success!==null&&r.technical_success!==undefined);
+  const ok=filtered.filter(r=>r.technical_success===true).length;
+  const tp=withTS.length?pct(ok,withTS.length):null;
+  const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
+  const diffs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre);
+  document.getElementById('c-key').innerHTML=`
+    <div class="stat-box"><div class="big green">${tp!=null?tp+'%':'—'}</div><div class="slbl">Technický úspech</div><div class="sci">${withTS.length?ci95(tp,withTS.length):''}</div></div>
+    <div class="stat-box"><div class="big red">${n?pct(comps.length,n)+'%':'—'}</div><div class="slbl">Miera komplikácií</div><div class="sci">${n?ci95(pct(comps.length,n),n):''}</div></div>
+    <div class="stat-box"><div class="big orange">${avg(diffs)!=null?(avg(diffs)>=0?'+':'')+avg(diffs).toFixed(2):'—'}</div><div class="slbl">Priemer △ ABI</div><div class="sci">${diffs.length?`n = ${diffs.length} pacientov`:''}</div></div>`;
+}
+
+function drawCUSUM_c(){
+  const sorted=[...filtered].filter(r=>r.technical_success!==null&&r.technical_success!==undefined).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let cusum=0;
+  const data=sorted.map((r,i)=>{cusum+=r.technical_success?-1:1;return{x:i+1,y:cusum};});
+  mk('c-cusum',{type:'line',data:{datasets:[
+    {label:'CUSUM',data,borderColor:C.purple(1),backgroundColor:C.purple(.1),tension:.2,pointRadius:3,fill:true,borderWidth:2},
+    {label:'Hranica',data:[{x:0,y:0},{x:sorted.length+1,y:0}],borderColor:C.red(.8),borderDash:[6,4],pointRadius:0,fill:false,borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{type:'linear',title:{display:true,text:'Poradie výkonu',color:'#718096'},grid:{color:'#2a3050'}},y:{title:{display:true,text:'CUSUM skóre',color:'#718096'},grid:{color:'#2a3050'}}},plugins:{legend:{display:false}}}});
+}
+
+function drawSAnat(){
+  const an=['Aortoiliakálna','Femoropopliiteálna','Infraplopliteálna','Kombinovaná (multi-level)'];
+  const rates=an.map(a=>{const rs=filtered.filter(r=>r.anatomy===a&&r.technical_success!==null&&r.technical_success!==undefined);return rs.length?Math.round(rs.filter(r=>r.technical_success).length/rs.length*100):null;});
+  mk('c-sanat',{type:'bar',data:{labels:an.map(a=>a.split(' ')[0]),datasets:[{data:rates,backgroundColor:rates.map(r=>r==null?C.muted(.3):r>=80?C.green(.8):r>=60?C.orange(.8):C.red(.8)),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}},plugins:{legend:{display:false}}}});
+}
+
+function drawSRuth(){
+  const g=[[0,1],[2,3],[4,5,6]];
+  const r=g.map(grp=>{const rs=filtered.filter(r=>grp.includes(r.rutherford)&&r.technical_success!==null&&r.technical_success!==undefined);return rs.length?Math.round(rs.filter(r=>r.technical_success).length/rs.length*100):null;});
+  mk('c-sruth',{type:'bar',data:{labels:['R 0–1','R 2–3','R 4–6'],datasets:[{data:r,backgroundColor:[C.green(.8),C.orange(.8),C.red(.8)],borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}},plugins:{legend:{display:false}}}});
+}
+
+function drawABI_c(){
+  const ap=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
+  const pm=avg(ap.map(r=>r.abi_pre)),pom=avg(ap.map(r=>r.abi_post));
+  const ps=sdv(ap.map(r=>r.abi_pre)),pos=sdv(ap.map(r=>r.abi_post));
+  mk('c-abi',{type:'bar',data:{labels:['Pred výkonom','Po výkone'],datasets:[{data:[pm,pom],backgroundColor:[C.muted(.6),C.green(.8)],borderRadius:8,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:1.3,grid:{color:'#2a3050'},title:{display:true,text:'ABI',color:'#718096'}},x:{grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>`${f2(i.raw)} ± ${f2(i.dataIndex===0?ps:pos)} SD`}}}}});
+}
+
+function drawABIAnat(){
+  const an=['Aortoiliakálna','Femoropopliiteálna','Infraplopliteálna','Kombinovaná (multi-level)'];
+  const d=an.map(a=>avg(filtered.filter(r=>r.anatomy===a&&r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre)));
+  mk('c-abi-anat',{type:'bar',data:{labels:an.map(a=>a.split(' ')[0]),datasets:[{data:d,backgroundColor:d.map(v=>v==null?C.muted(.3):v>=0?C.green(.8):C.red(.8)),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},title:{display:true,text:'△ ABI',color:'#718096'}},x:{grid:{display:false}}},plugins:{legend:{display:false}}}});
+}
+
+function drawPtime(){
+  const s=[...filtered].filter(r=>r.puncture_time_min&&r.date).sort((a,b)=>a.date.localeCompare(b.date));
+  mk('c-ptime',{type:'line',data:{labels:s.map((_,i)=>i+1),datasets:[{label:'Čas (min)',data:s.map(r=>r.puncture_time_min),borderColor:C.purple(1),backgroundColor:C.purple(.1),tension:.2,pointRadius:3,fill:true}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},title:{display:true,text:'min',color:'#718096'}},x:{grid:{display:false},title:{display:true,text:'Poradie výkonu',color:'#718096'}}},plugins:{legend:{display:false}}}});
+}
+
+function drawClosure_c(){
+  const devs=[...new Set(filtered.map(r=>r.closure_type).filter(Boolean))];
+  const d=devs.map(dv=>{const rs=filtered.filter(r=>r.closure_type===dv);const ok=rs.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;return rs.length?Math.round(ok/rs.length*100):0;});
+  mk('c-clos',{type:'bar',data:{labels:devs,datasets:[{data:d,backgroundColor:d.map(v=>v>=90?C.green(.8):v>=70?C.orange(.8):C.red(.8)),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}});
+}
+
+function buildTable2(){
+  const n=filtered.length;
+  const types=['Hematóm','Pseudoaneuryzma','Perforácia','Spazmus','Trombóza','Distálna embólia','Flow-limit. disekcia','Chir. konverzia','Iné'];
+  const total=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne')).length;
+  document.getElementById('c-table2').innerHTML=`<thead><tr><th>Typ komplikácie</th><th>n</th><th>%</th><th>95% CI</th></tr></thead><tbody>
+    ${types.map(t=>{const cnt=filtered.filter(r=>r.complications&&r.complications.includes(t)).length;return `<tr><td style="color:var(--muted)">${t}</td><td style="font-weight:500">${cnt}</td><td>${cnt?pct(cnt,n)+' %':'—'}</td><td style="color:var(--muted);font-size:11px">${cnt?ci95(pct(cnt,n),n):'—'}</td></tr>`;}).join('')}
+    <tr style="border-top:1px solid var(--border)"><td style="font-weight:500">Celkové komplikácie</td><td style="font-weight:500">${total}</td><td style="font-weight:500">${n?pct(total,n)+' %':'—'}</td><td style="color:var(--muted);font-size:11px">${n?ci95(pct(total,n),n):'—'}</td></tr>
+  </tbody>`;
+}
+
+init();
+</script>
+</body>
+</html>

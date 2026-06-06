@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vaskulárny Tréning — Záznamník Procedúr</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: #2a3050;
+    --accent: #4fd1c5;
+    --accent2: #f6ad55;
+    --text: #e2e8f0;
+    --muted: #718096;
+    --danger: #fc8181;
+    --success: #68d391;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 300; color: var(--accent); letter-spacing: 0.02em; }
+  .logo span { color: var(--muted); font-size: 11px; display: block; font-family: 'DM Mono', monospace; margin-top: 2px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .header-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .stats-bar { display: flex; gap: 20px; }
+  .stat { text-align: center; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--accent); line-height: 1; }
+  .stat-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+
+  nav { display: flex; gap: 6px; }
+  .nav-btn { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s; }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn.active { background: rgba(79,209,197,0.1); border-color: var(--accent); color: var(--accent); }
+  .nav-btn.evk { border-color: var(--accent2); color: var(--accent2); }
+  .nav-btn.evk:hover { background: rgba(246,173,85,0.1); }
+
+  .db-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .db-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .db-dot.connected { background: var(--success); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 28px 24px; display: grid; grid-template-columns: 420px 1fr; gap: 24px; align-items: start; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .panel-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .panel-header h2 { font-family: 'Fraunces', serif; font-weight: 300; font-size: 15px; color: var(--text); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .panel-body { padding: 20px; }
+
+  .section-title {
+    color: var(--accent); font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em;
+    margin-bottom: 12px; margin-top: 20px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .section-title.orange { color: var(--accent2); }
+  .section-title.green { color: var(--success); }
+
+  .field { margin-bottom: 12px; }
+  label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 5px; }
+
+  input[type="date"], input[type="number"], input[type="text"], select, textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; padding: 8px 12px;
+    outline: none; transition: border-color 0.15s; appearance: none; -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 60px; }
+  select option { background: var(--surface2); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* Rating */
+  .rating-group { display: flex; gap: 5px; flex-wrap: wrap; }
+  .rating-group input[type="radio"] { display: none; }
+  .rating-group label {
+    min-width: 28px; height: 28px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px;
+    color: var(--muted); transition: all 0.15s; text-transform: none; letter-spacing: 0; margin: 0; padding: 0 6px;
+  }
+  .rating-group input[type="radio"]:checked + label { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 500; }
+  .rating-group label:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Rutherford special */
+  .ruth-group { display: flex; gap: 5px; flex-wrap: wrap; }
+  .ruth-group input[type="radio"] { display: none; }
+  .ruth-group label {
+    height: 36px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 10px; color: var(--muted); transition: all 0.15s;
+    text-transform: none; letter-spacing: 0; margin: 0; padding: 0 10px; white-space: nowrap;
+  }
+  .ruth-group label .rnum { font-size: 13px; font-weight: 500; color: var(--text); }
+  .ruth-group input[type="radio"]:checked + label { background: rgba(246,173,85,0.2); border-color: var(--accent2); color: var(--accent2); }
+  .ruth-group input[type="radio"]:checked + label .rnum { color: var(--accent2); }
+  .ruth-group label:hover { border-color: var(--accent2); }
+
+  /* Checkboxes */
+  .checks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .check-item { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; transition: border-color 0.15s; }
+  .check-item:hover { border-color: var(--accent); }
+  .check-item input[type="checkbox"] { width: 12px; height: 12px; accent-color: var(--accent); flex-shrink: 0; }
+  .check-item span { font-size: 11px; color: var(--text); }
+  .check-item.danger:hover { border-color: var(--danger); }
+  .check-item.danger input[type="checkbox"] { accent-color: var(--danger); }
+
+  /* Boolean radio */
+  .bool-group { display: flex; gap: 8px; }
+  .bool-group input[type="radio"] { display: none; }
+  .bool-group label { flex: 1; height: 34px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: var(--muted); transition: all 0.15s; text-transform: none; letter-spacing: 0; margin: 0; }
+  .bool-group input[type="radio"]:checked + label.yes { background: rgba(104,211,145,0.2); border-color: var(--success); color: var(--success); }
+  .bool-group input[type="radio"]:checked + label.no { background: rgba(252,129,129,0.2); border-color: var(--danger); color: var(--danger); }
+  .bool-group label:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 6px; border: none; font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.05em; }
+  .btn-primary { background: var(--accent); color: var(--bg); font-weight: 500; width: 100%; justify-content: center; margin-top: 16px; }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: var(--bg); }
+  .btn-export { background: transparent; color: var(--accent2); border: 1px solid var(--accent2); }
+  .btn-export:hover { background: var(--accent2); color: var(--bg); }
+
+  .records-header { display: flex; align-items: center; justify-content: space-between; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; letter-spacing: 0.05em; white-space: nowrap; }
+  .badge-green { background: rgba(104,211,145,0.15); color: var(--success); }
+  .badge-yellow { background: rgba(246,173,85,0.15); color: var(--accent2); }
+  .badge-red { background: rgba(252,129,129,0.15); color: var(--danger); }
+  .badge-blue { background: rgba(79,209,197,0.15); color: var(--accent); }
+
+  .score { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .score-high { background: rgba(104,211,145,0.2); color: var(--success); }
+  .score-mid  { background: rgba(246,173,85,0.2);  color: var(--accent2); }
+  .score-low  { background: rgba(252,129,129,0.2); color: var(--danger); }
+
+  .ruth-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; font-size: 11px; font-weight: 600; background: rgba(246,173,85,0.2); color: var(--accent2); }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-state p { margin-top: 8px; font-size: 12px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 90%; max-width: 480px; }
+  .modal h3 { font-family: 'Fraunces', serif; font-weight: 300; font-size: 16px; margin-bottom: 16px; color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  .btn-cancel { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-save { background: var(--accent); color: var(--bg); font-weight: 500; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--accent); color: var(--accent); padding: 10px 18px; border-radius: 6px; font-size: 12px; opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 300; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .stats-bar { gap: 14px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    Vaskulárny Tréning
+    <span>Záznamník procedúr</span>
+  </div>
+  <div class="header-right">
+    <div class="db-status">
+      <div class="db-dot" id="db-dot"></div>
+      <span id="db-label">Pripájam...</span>
+    </div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Celkom</div></div>
+      <div class="stat"><div class="stat-num" id="stat-success">0</div><div class="stat-label">Úspech</div></div>
+      <div class="stat"><div class="stat-num" id="stat-closure">0</div><div class="stat-label">Uzavretia</div></div>
+      <div class="stat"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">Priem. skóre</div></div>
+    </div>
+    <nav>
+      <a class="nav-btn active" href="#">● Záznamy</a>
+      <a class="nav-btn" href="analyzy.html">📊 Analýzy</a>
+      <a class="nav-btn evk" href="https://www.cievny.sk/tools/EVK/" target="_blank">↗ EVK formulár</a>
+    </nav>
+  </div>
+</header>
+
+<div class="container">
+  <!-- FORM -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="dot"></div>
+      <h2>Nový záznam</h2>
+    </div>
+    <div class="panel-body">
+      <form id="procForm">
+
+        <!-- ZÁKLADNÉ -->
+        <div class="section-title">Základné informácie</div>
+        <div class="row2">
+          <div class="field"><label>Dátum</label><input type="date" id="f-date" required></div>
+          <div class="field"><label>Operatér</label><input type="text" id="f-doctor" placeholder="Meno"></div>
+        </div>
+        <div class="field">
+          <label>Typ procedúry</label>
+          <select id="f-type">
+            <option value="">— vybrať —</option>
+            <option>Periférna PTA</option>
+            <option>PTA + stenting</option>
+            <option>Aterektómia</option>
+            <option>Trombektómia / trombolýza</option>
+            <option>Kissing stent (aortoiliakálny)</option>
+            <option>CERAB technika</option>
+            <option>Stent-graft (EVAR/TEVAR)</option>
+            <option>CVC / hemodialyzačný prístup</option>
+            <option>Diagnostická angiografia (DSA)</option>
+            <option>Iné</option>
+          </select>
+        </div>
+
+        <!-- EVK KLINICKÉ -->
+        <div class="section-title orange">Klinické údaje (EVK)</div>
+        <div class="field">
+          <label>Rutherfordova klasifikácia</label>
+          <div class="ruth-group">
+            <input type="radio" name="rutherford" id="r0" value="0"><label for="r0"><span class="rnum">0</span>asympt.</label>
+            <input type="radio" name="rutherford" id="r1" value="1"><label for="r1"><span class="rnum">1</span>ľahká</label>
+            <input type="radio" name="rutherford" id="r2" value="2"><label for="r2"><span class="rnum">2</span>stredná</label>
+            <input type="radio" name="rutherford" id="r3" value="3"><label for="r3"><span class="rnum">3</span>ťažká</label>
+            <input type="radio" name="rutherford" id="r4" value="4"><label for="r4"><span class="rnum">4</span>bolesť</label>
+            <input type="radio" name="rutherford" id="r5" value="5"><label for="r5"><span class="rnum">5</span>defekt</label>
+            <input type="radio" name="rutherford" id="r6" value="6"><label for="r6"><span class="rnum">6</span>gangr.</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Anatomická lokalita</label>
+          <select id="f-anatomy">
+            <option value="">— vybrať —</option>
+            <option>Aortoiliakálna</option>
+            <option>Femoropopliiteálna</option>
+            <option>Infraplopliteálna</option>
+            <option>Kombinovaná (multi-level)</option>
+          </select>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>ABI pred výkonom</label>
+            <input type="number" id="f-abi-pre" min="0" max="2" step="0.01" placeholder="napr. 0.45">
+          </div>
+          <div class="field">
+            <label>ABI po výkone</label>
+            <input type="number" id="f-abi-post" min="0" max="2" step="0.01" placeholder="napr. 0.85">
+          </div>
+        </div>
+        <div class="field">
+          <label>Typ lézie / crossing</label>
+          <select id="f-lesion">
+            <option value="">— vybrať —</option>
+            <option>Intraluminálna</option>
+            <option>Subintimálna (PIER/SAFARI)</option>
+            <option>Kombinovaná</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Vykonané intervencie</label>
+          <div class="checks">
+            <label class="check-item"><input type="checkbox" name="interventions" value="PTA"><span>PTA</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="Stenting"><span>Stenting</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="Aterektómia"><span>Aterektómia</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="Trombektómia"><span>Trombektómia</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="Kissing stent"><span>Kissing stent</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="CERAB"><span>CERAB</span></label>
+            <label class="check-item"><input type="checkbox" name="interventions" value="Stent-graft"><span>Stent-graft</span></label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Technický úspech</label>
+          <div class="bool-group">
+            <input type="radio" name="tech-success" id="ts-yes" value="true">
+            <label for="ts-yes" class="yes">✓ Áno</label>
+            <input type="radio" name="tech-success" id="ts-no" value="false">
+            <label for="ts-no" class="no">✕ Nie</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Komplikácie</label>
+          <div class="checks">
+            <label class="check-item"><input type="checkbox" name="complications" value="Žiadne"><span>Žiadne</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Hematóm"><span>Hematóm</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Pseudoaneuryzma"><span>Pseudoaneuryzma</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Perforácia"><span>Perforácia</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Spazmus"><span>Spazmus</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Trombóza"><span>Trombóza</span></label>
+            <label class="check-item danger"><input type="checkbox" name="complications" value="Distálna embólia"><span>Embólia</span></label>
+          </div>
+        </div>
+
+        <!-- PRÍSTUP / VPICH -->
+        <div class="section-title">Artériový prístup — vpich</div>
+        <div class="row2">
+          <div class="field">
+            <label>Prístupová artéria</label>
+            <select id="f-side">
+              <option value="">— vybrať —</option>
+              <option>A. femoralis communis — l.sin. (ľavá)</option>
+              <option>A. femoralis communis — l.dx. (pravá)</option>
+              <option>A. brachialis — l.sin. (ľavá)</option>
+              <option>A. brachialis — l.dx. (pravá)</option>
+              <option>A. axillaris — l.sin. (ľavá)</option>
+              <option>A. axillaris — l.dx. (pravá)</option>
+              <option>A. poplitea</option>
+              <option>Vlastné</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Technika</label>
+            <select id="f-technique">
+              <option value="">— vybrať —</option>
+              <option>Prográdna</option>
+              <option>Retrográdna</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Smer</label>
+            <select id="f-direction">
+              <option value="">— vybrať —</option>
+              <option>Ipsilaterálna</option>
+              <option>Kontralaterálna</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Spôsob prístupu</label>
+            <select id="f-approach">
+              <option value="">— vybrať —</option>
+              <option>Perkutánne</option>
+              <option>Chirurgický cut-down</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Navádanie (guidance)</label>
+            <select id="f-method">
+              <option value="">— vybrať —</option>
+              <option>USG</option>
+              <option>XA (fluoroskopia)</option>
+              <option>USG + XA</option>
+              <option>Anatomické landmarky</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Anestézia</label>
+            <select id="f-anesthesia">
+              <option value="">— vybrať —</option>
+              <option>LA (lokálna)</option>
+              <option>SA (spinálna)</option>
+              <option>GA (celková)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Veľkosť sheatu</label>
+            <select id="f-sheath-size">
+              <option value="">— vybrať —</option>
+              <option>Bez sheatu</option>
+              <option>4 Fr</option>
+              <option>5 Fr</option>
+              <option>6 Fr</option>
+              <option>7 Fr</option>
+              <option>8 Fr</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Dĺžka sheatu</label>
+            <select id="f-sheath-length">
+              <option value="">— vybrať —</option>
+              <option>10 cm</option>
+              <option>25 cm</option>
+              <option>45 cm</option>
+              <option>55 cm</option>
+              <option>90 cm</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Katéter</label>
+          <select id="f-catheter">
+            <option value="">— vybrať —</option>
+            <option>Berenstein</option>
+            <option>JR 4</option>
+            <option>Cobra</option>
+            <option>SOS</option>
+            <option>Vertebrál</option>
+            <option>Pigtail</option>
+            <option>Vlastný</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Čas do úspešnej punkcie (min)</label>
+          <input type="number" id="f-ptime" min="0" max="120" placeholder="napr. 3">
+        </div>
+        <div class="field">
+          <label>Skóre vpich (1–10)</label>
+          <div class="rating-group">
+            <input type="radio" name="access-score" id="as1" value="1"><label for="as1">1</label>
+            <input type="radio" name="access-score" id="as2" value="2"><label for="as2">2</label>
+            <input type="radio" name="access-score" id="as3" value="3"><label for="as3">3</label>
+            <input type="radio" name="access-score" id="as4" value="4"><label for="as4">4</label>
+            <input type="radio" name="access-score" id="as5" value="5"><label for="as5">5</label>
+            <input type="radio" name="access-score" id="as6" value="6"><label for="as6">6</label>
+            <input type="radio" name="access-score" id="as7" value="7"><label for="as7">7</label>
+            <input type="radio" name="access-score" id="as8" value="8"><label for="as8">8</label>
+            <input type="radio" name="access-score" id="as9" value="9"><label for="as9">9</label>
+            <input type="radio" name="access-score" id="as10" value="10"><label for="as10">10</label>
+          </div>
+        </div>
+
+        <!-- UZÁVER / HEMOSTÁZA -->
+        <div class="section-title green">Uzáver — hemostáza</div>
+        <div class="row2">
+          <div class="field">
+            <label>Uzatváracie zariadenie</label>
+            <select id="f-closure">
+              <option value="">— vybrať —</option>
+              <option>Manuálna kompresia</option>
+              <option>AngioSeal 6F</option>
+              <option>AngioSeal 8F</option>
+              <option>FemoSeal</option>
+              <option>ProStyle</option>
+              <option>Mynx</option>
+              <option>Control</option>
+              <option>Manta</option>
+              <option>GLC</option>
+              <option>Iné zariadenie</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Kompresia (min)</label>
+            <input type="number" id="f-compression-time" min="0" max="60" placeholder="napr. 10">
+          </div>
+        </div>
+        <div class="field">
+          <label>Hemostáza dosiahnutá</label>
+          <select id="f-closure-result">
+            <option value="">— vybrať —</option>
+            <option>Úspešné</option>
+            <option>Ihneď</option>
+            <option>Po manuálnej kompresiі</option>
+            <option>Za použitia PatchPro bandáže</option>
+            <option>Chirurgická rekonštrukcia</option>
+          </select>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px">
+            <input type="checkbox" id="f-femostop" style="width:14px;height:14px;accent-color:var(--accent)">
+            <span style="color:var(--text)">Nasadený Femostop</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>Skóre uzáver (1–10)</label>
+          <div class="rating-group">
+            <input type="radio" name="closure-score" id="cs1" value="1"><label for="cs1">1</label>
+            <input type="radio" name="closure-score" id="cs2" value="2"><label for="cs2">2</label>
+            <input type="radio" name="closure-score" id="cs3" value="3"><label for="cs3">3</label>
+            <input type="radio" name="closure-score" id="cs4" value="4"><label for="cs4">4</label>
+            <input type="radio" name="closure-score" id="cs5" value="5"><label for="cs5">5</label>
+            <input type="radio" name="closure-score" id="cs6" value="6"><label for="cs6">6</label>
+            <input type="radio" name="closure-score" id="cs7" value="7"><label for="cs7">7</label>
+            <input type="radio" name="closure-score" id="cs8" value="8"><label for="cs8">8</label>
+            <input type="radio" name="closure-score" id="cs9" value="9"><label for="cs9">9</label>
+            <input type="radio" name="closure-score" id="cs10" value="10"><label for="cs10">10</label>
+          </div>
+        </div>
+
+        <!-- DOPLNKY -->
+        <div class="section-title">Doplnkové aktivity</div>
+        <div class="field">
+          <div class="checks">
+            <label class="check-item"><input type="checkbox" name="extras" value="Hemodynamická optimalizácia"><span>Hemodynamika</span></label>
+            <label class="check-item"><input type="checkbox" name="extras" value="Zobrazovacia optimalizácia"><span>Zobrazovanie</span></label>
+            <label class="check-item"><input type="checkbox" name="extras" value="Podanie liečiva"><span>Treatment</span></label>
+            <label class="check-item"><input type="checkbox" name="extras" value="Vedľajší výkon"><span>Vedľajší výkon</span></label>
+            <label class="check-item"><input type="checkbox" name="extras" value="Instrumentácia"><span>Instrumentácia</span></label>
+          </div>
+        </div>
+
+        <!-- POZNÁMKY -->
+        <div class="section-title">Poznámky</div>
+        <div class="field">
+          <textarea id="f-notes" placeholder="Vlastné postrehy, otázky, DRG poznámky..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">＋ Uložiť záznam</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="panel">
+    <div class="panel-header records-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="dot" style="background:var(--accent2)"></div>
+        <h2>Záznamy</h2>
+      </div>
+      <button class="btn btn-export btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div id="records-container">
+        <div class="empty-state"><div style="font-size:28px">○</div><p>Načítavam záznamy...</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <h3>Spätná väzba — vedúci lekár</h3>
+    <div class="field">
+      <label>Spätná väzba k záznamu</label>
+      <textarea id="modal-feedback" style="min-height:100px" placeholder="Čo by mal urobiť lepšie, čo sa podarilo..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Zrušiť</button>
+      <button class="btn btn-save" onclick="saveFeedback()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://jjsfabokyyvfmsbjvkkv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_asuF-oROdX9B74WzzwKtRQ_6zaf8MGp';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let records = [];
+let feedbackTarget = null;
+
+async function initDB() {
+  const { data, error } = await db.from('PROCEDURES').select('*').order('created_at', { ascending: false });
+  if (error) { setDBStatus(false); showToast('Chyba: ' + error.message, true); return; }
+  setDBStatus(true);
+  records = data || [];
+  render();
+  updateStats();
+}
+
+function setDBStatus(ok) {
+  document.getElementById('db-dot').className = 'db-dot' + (ok ? ' connected' : '');
+  document.getElementById('db-label').textContent = ok ? 'Supabase pripojené' : 'Chyba pripojenia';
+}
+
+function getRadio(name) {
+  const c = document.querySelector(`input[name="${name}"]:checked`);
+  return c ? c.value : null;
+}
+function getChecks(name) {
+  return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(cb => cb.value);
+}
+
+document.getElementById('procForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Ukladám...';
+
+  const tsVal = getRadio('tech-success');
+  const rec = {
+    date: document.getElementById('f-date').value,
+    doctor: document.getElementById('f-doctor').value || null,
+    procedure_type: document.getElementById('f-type').value || null,
+    rutherford: getRadio('rutherford') ? parseInt(getRadio('rutherford')) : null,
+    anatomy: document.getElementById('f-anatomy').value || null,
+    abi_pre: document.getElementById('f-abi-pre').value ? parseFloat(document.getElementById('f-abi-pre').value) : null,
+    abi_post: document.getElementById('f-abi-post').value ? parseFloat(document.getElementById('f-abi-post').value) : null,
+    lesion_type: document.getElementById('f-lesion').value || null,
+    interventions: getChecks('interventions'),
+    technical_success: tsVal === null ? null : tsVal === 'true',
+    complications: getChecks('complications'),
+    side: document.getElementById('f-side').value || null,
+    method: document.getElementById('f-method').value || null,
+    puncture_time_min: document.getElementById('f-ptime').value ? parseInt(document.getElementById('f-ptime').value) : null,
+    access_score: getRadio('access-score') ? parseInt(getRadio('access-score')) : null,
+    closure_type: document.getElementById('f-closure').value || null,
+    closure_result: document.getElementById('f-closure-result').value || null,
+    closure_score: getRadio('closure-score') ? parseInt(getRadio('closure-score')) : null,
+    technique: document.getElementById('f-technique').value || null,
+    direction: document.getElementById('f-direction').value || null,
+    approach: document.getElementById('f-approach').value || null,
+    anesthesia: document.getElementById('f-anesthesia').value || null,
+    sheath_size: document.getElementById('f-sheath-size').value || null,
+    sheath_length: document.getElementById('f-sheath-length').value || null,
+    catheter: document.getElementById('f-catheter').value || null,
+    compression_time: document.getElementById('f-compression-time').value ? parseInt(document.getElementById('f-compression-time').value) : null,
+    femostop: document.getElementById('f-femostop').checked || false,
+    extras: getChecks('extras'),
+    notes: document.getElementById('f-notes').value || null,
+    feedback: null
+  };
+
+  const { data, error } = await db.from('PROCEDURES').insert([rec]).select();
+  if (error) {
+    showToast('Chyba: ' + error.message, true);
+  } else {
+    records.unshift(data[0]);
+    render(); updateStats();
+    this.reset();
+    document.getElementById('f-date').valueAsDate = new Date();
+    showToast('Záznam uložený ✓');
+  }
+  btn.disabled = false; btn.textContent = '＋ Uložiť záznam';
+});
+
+async function deleteRecord(id) {
+  if (!confirm('Vymazať záznam?')) return;
+  const { error } = await db.from('PROCEDURES').delete().eq('id', id);
+  if (error) { showToast('Chyba vymazania', true); return; }
+  records = records.filter(r => r.id !== id);
+  render(); updateStats();
+  showToast('Záznam vymazaný');
+}
+
+function openFeedback(id) {
+  feedbackTarget = id;
+  const rec = records.find(r => r.id === id);
+  document.getElementById('modal-feedback').value = rec.feedback || '';
+  document.getElementById('feedbackModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('feedbackModal').classList.remove('open');
+  feedbackTarget = null;
+}
+async function saveFeedback() {
+  const fb = document.getElementById('modal-feedback').value;
+  const { error } = await db.from('PROCEDURES').update({ feedback: fb }).eq('id', feedbackTarget);
+  if (error) { showToast('Chyba uloženia', true); return; }
+  const rec = records.find(r => r.id === feedbackTarget);
+  if (rec) rec.feedback = fb;
+  render();
+  showToast('Spätná väzba uložená ✓');
+  closeModal();
+}
+
+function scoreClass(s) {
+  if (!s) return '';
+  return s >= 8 ? 'score-high' : s >= 5 ? 'score-mid' : 'score-low';
+}
+
+function render() {
+  const c = document.getElementById('records-container');
+  if (!records.length) {
+    c.innerHTML = `<div class="empty-state"><div style="font-size:28px">○</div><p>Zatiaľ žiadne záznamy.</p></div>`;
+    return;
+  }
+  c.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Dátum</th><th>Typ</th><th>Ruth.</th><th>Anatómia</th><th>ABI</th>
+      <th>Prístup</th><th>Uzavretie</th><th>Úspech</th><th>FB</th><th></th>
+    </tr></thead>
+    <tbody>
+    ${records.map(r => `<tr>
+      <td style="color:var(--muted);white-space:nowrap">${r.date||'—'}</td>
+      <td style="font-size:11px;max-width:120px">${r.procedure_type||'—'}</td>
+      <td>${r.rutherford != null ? `<span class="ruth-badge">${r.rutherford}</span>` : '—'}</td>
+      <td style="font-size:11px">${r.anatomy ? r.anatomy.split(' ')[0] : '—'}</td>
+      <td style="font-size:11px;white-space:nowrap">
+        ${r.abi_pre != null ? `<span style="color:var(--muted)">${r.abi_pre}</span>` : ''}
+        ${r.abi_pre != null && r.abi_post != null ? ' → ' : ''}
+        ${r.abi_post != null ? `<span style="color:var(--success)">${r.abi_post}</span>` : ''}
+        ${r.abi_pre == null && r.abi_post == null ? '—' : ''}
+      </td>
+      <td>
+        ${r.access_score ? `<span class="score ${scoreClass(r.access_score)}">${r.access_score}</span>` : '—'}
+        ${r.puncture_time_min ? `<span style="color:var(--muted);font-size:10px;margin-left:3px">${r.puncture_time_min}m</span>` : ''}
+      </td>
+      <td>
+        ${r.closure_result === 'Úspešné' ? `<span class="badge badge-green" style="font-size:9px">OK</span>` :
+          r.closure_result ? `<span class="badge badge-yellow" style="font-size:9px">!</span>` : '—'}
+        ${r.closure_score ? `<span class="score ${scoreClass(r.closure_score)}" style="margin-left:3px">${r.closure_score}</span>` : ''}
+      </td>
+      <td>
+        ${r.technical_success === true ? `<span class="badge badge-green">✓</span>` :
+          r.technical_success === false ? `<span class="badge badge-red">✕</span>` : '—'}
+      </td>
+      <td>
+        <button class="btn btn-sm" style="background:${r.feedback?'rgba(79,209,197,0.15)':'var(--surface2)'};color:${r.feedback?'var(--accent)':'var(--muted)'};border:1px solid var(--border)" onclick="openFeedback(${r.id})">
+          ${r.feedback ? '✎' : '+'}
+        </button>
+      </td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteRecord(${r.id})">✕</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = records.length;
+  document.getElementById('stat-success').textContent = records.filter(r => r.technical_success === true).length;
+  document.getElementById('stat-closure').textContent = records.filter(r => r.closure_result === 'Úspešné').length;
+  const scores = records.flatMap(r => [r.access_score, r.closure_score].filter(Boolean));
+  document.getElementById('stat-avg').textContent = scores.length
+    ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '—';
+}
+
+function exportCSV() {
+  if (!records.length) { showToast('Žiadne záznamy'); return; }
+  const h = ['Dátum','Operatér','Procedúra','Rutherford','Anatómia','ABI pred','ABI po','Lézia','Intervencie','Tech.úspech','Komplikácie','Prístup','Metóda','Čas punkcie','Skóre prístupu','Uzavretie','Výsledok','Skóre uzavretia','Extras','Poznámky','Spätná väzba'];
+  const rows = records.map(r => [
+    r.date, r.doctor, r.procedure_type, r.rutherford, r.anatomy, r.abi_pre, r.abi_post,
+    r.lesion_type, (r.interventions||[]).join('; '), r.technical_success, (r.complications||[]).join('; '),
+    r.side, r.method, r.puncture_time_min, r.access_score,
+    r.closure_type, r.closure_result, r.closure_score,
+    (r.extras||[]).join('; '), r.notes, r.feedback
+  ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
+  const csv = [h.join(','),...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download = `evk-trening-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV exportované ✓');
+}
+
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError?' error':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+document.getElementById('f-date').valueAsDate = new Date();
+initDB();
+</script>
+</body>
+</html>
