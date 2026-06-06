@@ -226,7 +226,12 @@ select.doc-select{
 <div id="dash-view" class="container">
   <div class="filter-row">
     <label>Operatér:</label>
-    <select class="filter" id="f-doctor" onchange="applyFilters()"><option value="">Všetci</option></select>
+    <select class="filter" id="f-doctor" onchange="applyFilters()">
+      <option value="">Všetci</option>
+      <option>Dr. Kocán</option>
+      <option>Dr. Piš</option>
+      <option>Dr. Nemec</option>
+    </select>
     <label>Anatómia:</label>
     <select class="filter" id="f-anatomy" onchange="applyFilters()">
       <option value="">Všetky</option>
@@ -278,6 +283,9 @@ select.doc-select{
     <h3>Profil lekára</h3>
     <select class="doc-select" id="doc-select" onchange="renderDocProfile()">
       <option value="">— vybrať lekára —</option>
+      <option>Dr. Kocán</option>
+      <option>Dr. Piš</option>
+      <option>Dr. Nemec</option>
     </select>
     <span style="color:var(--muted);font-size:11px" id="doc-period-note"></span>
   </div>
@@ -463,12 +471,7 @@ async function init(){
 }
 
 function populateFilters(){
-  const docs=[...new Set(all.map(r=>r.doctor).filter(Boolean))].sort();
-  const sel=document.getElementById('f-doctor');
-  const dsel=document.getElementById('doc-select');
-  docs.forEach(d=>{
-    [sel,dsel].forEach(s=>{const o=document.createElement('option');o.value=d;o.textContent=d;s.appendChild(o);});
-  });
+  // Lekári sú fixne definovaní v HTML — nič dynamicky nepridávame
 }
 
 function applyFilters(){
