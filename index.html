@@ -540,16 +540,39 @@
 </div>
 
 <!-- FEEDBACK MODAL -->
+<!-- FEEDBACK MODAL -->
 <div class="modal-overlay" id="feedbackModal">
   <div class="modal">
-    <h3>Spätná väzba — vedúci lekár</h3>
+    <h3>Spätná väzba — supervízor</h3>
     <div class="field">
-      <label>Spätná väzba k záznamu</label>
-      <textarea id="modal-feedback" style="min-height:100px" placeholder="Čo by mal urobiť lepšie, čo sa podarilo..."></textarea>
+      <label>Supervízor</label>
+      <select id="modal-supervisor" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:8px 12px;outline:none;appearance:none;">
+        <option value="">— vybrať supervízora —</option>
+        <option>Dr. Vincze</option>
+        <option>Dr. Vařejka</option>
+        <option>Dr. Širila</option>
+        <option>Dr. Fľak</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Poznámka supervízora</label>
+      <textarea id="modal-feedback" style="min-height:120px" placeholder="Čo by mal urobiť lepšie, čo sa podarilo, odporúčania..."></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeModal()">Zrušiť</button>
       <button class="btn btn-save" onclick="saveFeedback()">Uložiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:380px">
+    <h3 style="color:var(--danger)">⚠ Vymazať záznam?</h3>
+    <p style="color:var(--muted);font-size:12px;margin-top:8px;line-height:1.6">Táto akcia je nevratná. Záznam bude trvalo vymazaný z databázy.</p>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeDeleteModal()">Zrušiť</button>
+      <button class="btn" style="background:var(--danger);color:var(--bg);font-weight:500" onclick="confirmDelete()">Vymazať</button>
     </div>
   </div>
 </div>
@@ -639,19 +662,39 @@ document.getElementById('procForm').addEventListener('submit', async function(e)
   btn.disabled = false; btn.textContent = '＋ Uložiť záznam';
 });
 
-async function deleteRecord(id) {
-  if (!confirm('Vymazať záznam?')) return;
-  const { error } = await db.from('PROCEDURES').delete().eq('id', id);
+let deleteTarget = null;
+
+function deleteRecord(id) {
+  deleteTarget = id;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  deleteTarget = null;
+}
+async function confirmDelete() {
+  if (!deleteTarget) return;
+  const { error } = await db.from('PROCEDURES').delete().eq('id', deleteTarget);
   if (error) { showToast('Chyba vymazania', true); return; }
-  records = records.filter(r => r.id !== id);
+  records = records.filter(r => r.id !== deleteTarget);
   render(); updateStats();
   showToast('Záznam vymazaný');
+  closeDeleteModal();
 }
 
 function openFeedback(id) {
   feedbackTarget = id;
   const rec = records.find(r => r.id === id);
-  document.getElementById('modal-feedback').value = rec.feedback || '';
+  // Rozlož uloženú spätnú väzbu — formát: "Text\n— Dr. Meno"
+  const stored = rec.feedback || '';
+  const sigMatch = stored.match(/\n— (.+)$/);
+  if (sigMatch) {
+    document.getElementById('modal-feedback').value = stored.replace(/\n— .+$/, '');
+    document.getElementById('modal-supervisor').value = sigMatch[1];
+  } else {
+    document.getElementById('modal-feedback').value = stored;
+    document.getElementById('modal-supervisor').value = '';
+  }
   document.getElementById('feedbackModal').classList.add('open');
 }
 function closeModal() {
@@ -659,7 +702,11 @@ function closeModal() {
   feedbackTarget = null;
 }
 async function saveFeedback() {
-  const fb = document.getElementById('modal-feedback').value;
+  const text = document.getElementById('modal-feedback').value.trim();
+  const supervisor = document.getElementById('modal-supervisor').value;
+  if (!text) { showToast('Napíšte poznámku', true); return; }
+  if (!supervisor) { showToast('Vyberte supervízora', true); return; }
+  const fb = `${text}\n— ${supervisor}`;
   const { error } = await db.from('PROCEDURES').update({ feedback: fb }).eq('id', feedbackTarget);
   if (error) { showToast('Chyba uloženia', true); return; }
   const rec = records.find(r => r.id === feedbackTarget);
