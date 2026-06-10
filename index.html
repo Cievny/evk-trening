@@ -422,6 +422,27 @@
             <option>Vlastný</option>
           </select>
         </div>
+        <div class="row2">
+          <div class="field">
+            <label>Výsledok punkcie</label>
+            <select id="f-puncture-success">
+              <option value="">— vybrať —</option>
+              <option value="success">Úspešná</option>
+              <option value="failed">Neúspešná</option>
+              <option value="converted">Konvertovaná (iné miesto)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Počet pokusov</label>
+            <select id="f-puncture-attempts">
+              <option value="">— vybrať —</option>
+              <option value="1">1 (first-pass)</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4+</option>
+            </select>
+          </div>
+        </div>
         <div class="field">
           <label>Čas do úspešnej punkcie (min)</label>
           <input type="number" id="f-ptime" min="0" max="120" placeholder="napr. 3">
@@ -618,6 +639,8 @@ document.getElementById('procForm').addEventListener('submit', async function(e)
     complications: getChecks('complications'),
     side: document.getElementById('f-side').value || null,
     method: document.getElementById('f-method').value || null,
+    puncture_success: document.getElementById('f-puncture-success').value || null,
+    puncture_attempts: document.getElementById('f-puncture-attempts').value ? parseInt(document.getElementById('f-puncture-attempts').value) : null,
     puncture_time_min: document.getElementById('f-ptime').value ? parseInt(document.getElementById('f-ptime').value) : null,
     access_score: getRadio('access-score') ? parseInt(getRadio('access-score')) : null,
     closure_type: document.getElementById('f-closure').value || null,
@@ -729,8 +752,10 @@ function render() {
       <td>${r.rutherford != null ? `<span class="ruth-badge">${r.rutherford}</span>` : '—'}</td>
       <td style="font-size:11px">${r.anatomy ? r.anatomy.split(' ')[0] : '—'}</td>
       <td>
+        ${r.puncture_success === 'failed' ? `<span class="badge badge-red" style="font-size:9px;margin-right:3px">✕ vpich</span>` : r.puncture_success === 'converted' ? `<span class="badge badge-yellow" style="font-size:9px;margin-right:3px">↩ konv.</span>` : ''}
         ${r.access_score ? `<span class="score ${scoreClass(r.access_score)}">${r.access_score}</span>` : '—'}
-        ${r.puncture_time_min ? `<span style="color:var(--muted);font-size:10px;margin-left:3px">${r.puncture_time_min}m</span>` : ''}
+        ${r.puncture_attempts ? `<span style="color:var(--muted);font-size:10px;margin-left:3px">${r.puncture_attempts}×</span>` : ''}
+        ${r.puncture_time_min ? `<span style="color:var(--muted);font-size:10px;margin-left:2px">${r.puncture_time_min}m</span>` : ''}
       </td>
       <td>
         ${r.closure_result === 'Úspešné' ? `<span class="badge badge-green" style="font-size:9px">OK</span>` :
@@ -763,7 +788,7 @@ function updateStats() {
 
 function exportCSV() {
   if (!records.length) { showToast('Žiadne záznamy'); return; }
-  const h = ['Dátum','Operatér','Procedúra','Rutherford','Anatómia','Lézia','Intervencie','Tech.úspech','Komplikácie','Prístup','Metóda','Čas punkcie','Skóre prístupu','Uzavretie','Výsledok','Skóre uzavretia','Extras','Poznámky','Spätná väzba'];
+  const h = ['Dátum','Operatér','Procedúra','Rutherford','Anatómia','Lézia','Intervencie','Tech.úspech','Komplikácie','Prístup','Metóda','Výsledok punkcie','Počet pokusov','Čas punkcie','Skóre prístupu','Uzavretie','Výsledok','Skóre uzavretia','Extras','Poznámky','Spätná väzba'];
   const rows = records.map(r => [
     r.date, r.doctor, r.procedure_type, r.rutherford, r.anatomy,
     r.lesion_type, (r.interventions||[]).join('; '), r.technical_success, (r.complications||[]).join('; '),

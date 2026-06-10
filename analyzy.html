@@ -251,6 +251,7 @@ select.doc-select{
     <div class="kpi"><div class="kpi-num green" id="k-tech">—</div><div class="kpi-label">Tech. úspech</div><div class="kpi-sub" id="k-tech-s"></div></div>
     <div class="kpi"><div class="kpi-num red" id="k-comp">—</div><div class="kpi-label">Komplikácie</div><div class="kpi-sub" id="k-comp-s"></div></div>
     <div class="kpi"><div class="kpi-num purple" id="k-fp">—</div><div class="kpi-label">First-pass vpich</div><div class="kpi-sub" id="k-fp-s"></div></div>
+    <div class="kpi"><div class="kpi-num red" id="k-failed">—</div><div class="kpi-label">Neúspešná punkcia</div><div class="kpi-sub" id="k-failed-s"></div></div>
   </div>
 
   <div class="g2" style="grid-template-columns:2fr 1fr">
@@ -313,6 +314,8 @@ select.doc-select{
       <div class="doc-kpi"><div class="doc-kpi-num orange" id="d-cs">—</div><div class="doc-kpi-label">Ø Skóre uzáver</div></div>
       <div class="doc-kpi"><div class="doc-kpi-num purple" id="d-pt">—</div><div class="doc-kpi-label">Ø Čas punkcie</div></div>
       <div class="doc-kpi"><div class="doc-kpi-num red" id="d-cp">—</div><div class="doc-kpi-label">Komplikácie</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num green" id="d-fp">—</div><div class="doc-kpi-label">First-pass rate</div></div>
+      <div class="doc-kpi"><div class="doc-kpi-num red" id="d-fail">—</div><div class="doc-kpi-label">Neúspešná punkcia</div></div>
     </div>
 
     <!-- Competency bars -->
@@ -514,10 +517,19 @@ function updateKPIs(){
   const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
   document.getElementById('k-comp').textContent=comps.length;
   document.getElementById('k-comp-s').textContent=n?`${pct(comps.length,n)} % procedúr`:'';
-  const wp=filtered.filter(r=>r.puncture_time_min!=null);
-  const fp=wp.filter(r=>r.puncture_time_min<=2).length;
-  document.getElementById('k-fp').textContent=wp.length?`${pct(fp,wp.length)} %`:'—';
-  document.getElementById('k-fp-s').textContent=wp.length?`n=${wp.length}`:'';
+  // First-pass: attempts=1 alebo (no attempts data) puncture_time<=2
+  const wpA=filtered.filter(r=>r.puncture_attempts!=null);
+  const fpA=wpA.filter(r=>r.puncture_attempts===1).length;
+  const wpT=filtered.filter(r=>r.puncture_time_min!=null&&r.puncture_attempts==null);
+  const fpT=wpT.filter(r=>r.puncture_time_min<=2).length;
+  const fpTotal=fpA+fpT; const fpBase=wpA.length+wpT.length;
+  document.getElementById('k-fp').textContent=fpBase?`${pct(fpTotal,fpBase)} %`:'—';
+  document.getElementById('k-fp-s').textContent=fpBase?`n=${fpBase}`:'';
+  // Neúspešné vpichy
+  const failed=filtered.filter(r=>r.puncture_success==='failed'||r.puncture_success==='converted');
+  const withPS=filtered.filter(r=>r.puncture_success);
+  document.getElementById('k-failed').textContent=withPS.length?`${pct(failed.length,withPS.length)} %`:'—';
+  document.getElementById('k-failed-s').textContent=withPS.length?`n=${failed.length} / ${withPS.length}`:'';
 }
 
 // ===== DASHBOARD CHARTS =====
@@ -634,6 +646,12 @@ function renderDocProfile(){
   document.getElementById('d-cs').textContent=f1(avg(cScores));
   document.getElementById('d-pt').textContent=ptimes.length?f1(avg(ptimes))+' min':'—';
   document.getElementById('d-cp').textContent=comps.length?`${pct(comps.length,n)} %`:'0 %';
+  const fpRecs=recs.filter(r=>r.puncture_attempts!=null);
+  const fp1Recs=fpRecs.filter(r=>r.puncture_attempts===1);
+  document.getElementById('d-fp').textContent=fpRecs.length?`${pct(fp1Recs.length,fpRecs.length)} %`:'—';
+  const psRecs=recs.filter(r=>r.puncture_success);
+  const failRecs=psRecs.filter(r=>r.puncture_success==='failed'||r.puncture_success==='converted');
+  document.getElementById('d-fail').textContent=psRecs.length?`${pct(failRecs.length,psRecs.length)} %`:'—';
 
   // Group averages for comparison
   const gAS=all.map(r=>r.access_score).filter(Boolean);
@@ -779,6 +797,8 @@ function buildTable1(){
     {l:'USG-navádzaný vpich',v:(()=>{const us=filtered.filter(r=>r.method&&r.method.includes('USG')).length;return n?`${us}/${n} (${pct(us,n)} %)`:'—';})()},
     {l:'Pozícia sondy — long-axis',v:(()=>{const la=filtered.filter(r=>r.usg_position&&r.usg_position.includes('long')).length;const usgN=filtered.filter(r=>r.usg_position).length;return usgN?`${la}/${usgN} (${pct(la,usgN)} %)`:'—';})()},
     {l:'Pozícia sondy — short-axis',v:(()=>{const sa=filtered.filter(r=>r.usg_position&&r.usg_position.includes('short')).length;const usgN=filtered.filter(r=>r.usg_position).length;return usgN?`${sa}/${usgN} (${pct(sa,usgN)} %)`:'—';})()},
+    {l:'First-pass úspech',v:(()=>{const wa=filtered.filter(r=>r.puncture_attempts!=null);const fp1=wa.filter(r=>r.puncture_attempts===1).length;return wa.length?`${fp1}/${wa.length} (${pct(fp1,wa.length)} %)`:'—';})()},
+    {l:'Neúspešná / konvertovaná punkcia',v:(()=>{const wp=filtered.filter(r=>r.puncture_success);const bad=wp.filter(r=>r.puncture_success==='failed'||r.puncture_success==='converted').length;return wp.length?`${bad}/${wp.length} (${pct(bad,wp.length)} %)`:'—';})()},
     {l:'Čas punkcie — priemer ± SD (min)',v:pt.length?`${f1(avg(pt))} ± ${f1(sdv(pt))}`:'—'},
     {l:'Čas punkcie — medián (min)',v:pt.length?`${[...pt].sort((a,b)=>a-b)[Math.floor(pt.length/2)]}`:'—'},
     {l:'Skóre vpich — priemer ± SD',v:aS.length?`${f1(avg(aS))} ± ${f1(sdv(aS))}`:'—'},
