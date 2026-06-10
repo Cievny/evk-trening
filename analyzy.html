@@ -250,7 +250,6 @@ select.doc-select{
     <div class="kpi"><div class="kpi-num" id="k-total">—</div><div class="kpi-label">Celkom procedúr</div></div>
     <div class="kpi"><div class="kpi-num green" id="k-tech">—</div><div class="kpi-label">Tech. úspech</div><div class="kpi-sub" id="k-tech-s"></div></div>
     <div class="kpi"><div class="kpi-num red" id="k-comp">—</div><div class="kpi-label">Komplikácie</div><div class="kpi-sub" id="k-comp-s"></div></div>
-    <div class="kpi"><div class="kpi-num orange" id="k-abi">—</div><div class="kpi-label">△ ABI priemer</div><div class="kpi-sub" id="k-abi-s"></div></div>
     <div class="kpi"><div class="kpi-num purple" id="k-fp">—</div><div class="kpi-label">First-pass vpich</div><div class="kpi-sub" id="k-fp-s"></div></div>
   </div>
 
@@ -264,13 +263,12 @@ select.doc-select{
     <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--danger)"></div><h2>Komplikácie</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-comp"></canvas></div></div></div>
   </div>
   <div class="g2">
-    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--success)"></div><h2>ABI — pred vs. po</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-abi"></canvas></div></div></div>
-    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Uzatváracie zariadenia</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-closure"></canvas></div></div></div>
+    <div class="panel" style="grid-column:1/-1"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Uzatváracie zariadenia</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-closure"></canvas></div></div></div>
   </div>
   <div class="panel">
     <div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Prehľad podľa operatéra</h2></div></div>
     <div class="panel-body" style="padding:0"><div class="tw"><table>
-      <thead><tr><th>Operatér</th><th>n</th><th>Tech. úspech</th><th>Priem. R.</th><th>△ ABI</th><th>Vpich ø</th><th>Uzáver ø</th><th>Komp.</th><th></th></tr></thead>
+      <thead><tr><th>Operatér</th><th>n</th><th>Tech. úspech</th><th>Priem. R.</th><th>Vpich ø</th><th>Uzáver ø</th><th>Komp.</th><th></th></tr></thead>
       <tbody id="t-docs"></tbody>
     </table></div></div>
   </div>
@@ -348,7 +346,7 @@ select.doc-select{
     <div class="panel">
       <div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--muted)"></div><h2>Záznamy procedúr</h2></div></div>
       <div class="panel-body" style="padding:0"><div class="tw"><table>
-        <thead><tr><th>Dátum</th><th>Typ</th><th>R.</th><th>Anatómia</th><th>ABI △</th><th>Vpich</th><th>Uzáver</th><th>Úspech</th><th>Komp.</th></tr></thead>
+        <thead><tr><th>Dátum</th><th>Typ</th><th>R.</th><th>Anatómia</th><th>Vpich</th><th>Uzáver</th><th>Úspech</th><th>Komp.</th></tr></thead>
         <tbody id="d-proc-log"></tbody>
       </table></div></div>
     </div>
@@ -393,18 +391,10 @@ select.doc-select{
     </div>
   </div>
   <div class="cong-sec">
-    <div class="cong-sec-title"><span class="fig-lbl">Figure 3</span>Hemodynamický výsledok — ABI</div>
+    <div class="cong-sec-title"><span class="fig-lbl">Figure 3</span>Čas punkcie a výsledky uzáveru</div>
     <div class="cong-2col">
-      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">ABI pred vs. po (priemer ± SD)</div><div class="cpanel-fig">Fig. 3a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-abi"></canvas></div></div></div>
-      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">△ ABI podľa anatomickej lokalizácie</div><div class="cpanel-fig">Fig. 3b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-abi-anat"></canvas></div></div></div>
-    </div>
-    <p class="footnote">ABI: ankle-brachial index. Hodnoty prezentované ako priemer ± štandardná odchýlka (SD).</p>
-  </div>
-  <div class="cong-sec">
-    <div class="cong-sec-title"><span class="fig-lbl">Figure 4</span>Čas punkcie a výsledky uzáveru</div>
-    <div class="cong-2col">
-      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Čas do úspešnej punkcie — trend</div><div class="cpanel-fig">Fig. 4a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-ptime"></canvas></div></div></div>
-      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Úspešnosť uzáveru podľa zariadenia (%)</div><div class="cpanel-fig">Fig. 4b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-clos"></canvas></div></div></div>
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Čas do úspešnej punkcie — trend</div><div class="cpanel-fig">Fig. 3a</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-ptime"></canvas></div></div></div>
+      <div class="cpanel"><div class="cpanel-header"><div class="cpanel-title">Úspešnosť uzáveru podľa zariadenia (%)</div><div class="cpanel-fig">Fig. 3b</div></div><div class="cpanel-body"><div style="height:220px"><canvas id="c-clos"></canvas></div></div></div>
     </div>
   </div>
   <div class="cong-sec">
@@ -512,10 +502,6 @@ function updateKPIs(){
   const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
   document.getElementById('k-comp').textContent=comps.length;
   document.getElementById('k-comp-s').textContent=n?`${pct(comps.length,n)} % procedúr`:'';
-  const diffs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre);
-  const da=avg(diffs);
-  document.getElementById('k-abi').textContent=da!=null?(da>=0?'+':'')+da.toFixed(2):'—';
-  document.getElementById('k-abi-s').textContent=diffs.length?`n=${diffs.length}`:'';
   const wp=filtered.filter(r=>r.puncture_time_min!=null);
   const fp=wp.filter(r=>r.puncture_time_min<=2).length;
   document.getElementById('k-fp').textContent=wp.length?`${pct(fp,wp.length)} %`:'—';
@@ -548,13 +534,6 @@ function drawDash(){
   const cTypes=['Hematóm','Pseudoaneuryzma','Perforácia','Spazmus','Trombóza','Distálna embólia'];
   mk('ch-comp',{type:'bar',data:{labels:cTypes,datasets:[{data:cTypes.map(t=>filtered.filter(r=>r.complications&&r.complications.includes(t)).length),backgroundColor:C.red(.7),borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},ticks:{stepSize:1}},x:{grid:{display:false},ticks:{font:{size:9}}}},plugins:{legend:{display:false}}}});
 
-  // ABI
-  const pairs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
-  mk('ch-abi',{type:'bar',data:{labels:pairs.map((r,i)=>r.date||'#'+(i+1)),datasets:[
-    {label:'Pred',data:pairs.map(r=>r.abi_pre),backgroundColor:C.muted(.6),borderRadius:4,borderWidth:0},
-    {label:'Po',data:pairs.map(r=>r.abi_post),backgroundColor:C.green(.7),borderRadius:4,borderWidth:0}
-  ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:1.5,grid:{color:'#2a3050'}},x:{grid:{display:false},ticks:{font:{size:9}}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
-
   // Closure device
   const devs=[...new Set(filtered.map(r=>r.closure_type).filter(Boolean))];
   mk('ch-closure',{type:'bar',data:{labels:devs,datasets:[{data:devs.map(d=>{const rs=filtered.filter(r=>r.closure_type===d);const ok=rs.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;return rs.length?Math.round(ok/rs.length*100):0;}),backgroundColor:PAL,borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}});
@@ -564,11 +543,10 @@ function drawDoctorTable(){
   const byDoc={};
   filtered.forEach(r=>{
     const k=r.doctor||'(neuvedený)';
-    if(!byDoc[k])byDoc[k]={n:0,ts:0,tsN:0,ruth:[],abiD:[],aS:[],cS:[],comps:0};
+    if(!byDoc[k])byDoc[k]={n:0,ts:0,tsN:0,ruth:[],aS:[],cS:[],comps:0};
     byDoc[k].n++;
     if(r.technical_success!==null&&r.technical_success!==undefined){byDoc[k].tsN++;if(r.technical_success)byDoc[k].ts++;}
     if(r.rutherford!=null)byDoc[k].ruth.push(r.rutherford);
-    if(r.abi_pre!=null&&r.abi_post!=null)byDoc[k].abiD.push(r.abi_post-r.abi_pre);
     if(r.access_score)byDoc[k].aS.push(r.access_score);
     if(r.closure_score)byDoc[k].cS.push(r.closure_score);
     if(r.complications&&r.complications.length&&!r.complications.includes('Žiadne'))byDoc[k].comps++;
@@ -577,12 +555,11 @@ function drawDoctorTable(){
   if(!Object.keys(byDoc).length){tb.innerHTML=`<tr><td colspan="9" class="empty">Žiadne dáta</td></tr>`;return;}
   tb.innerHTML=Object.entries(byDoc).sort((a,b)=>b[1].n-a[1].n).map(([doc,d])=>{
     const tp=d.tsN?pct(d.ts,d.tsN):null;
-    const ra=avg(d.ruth);const aa=avg(d.abiD);const asc=avg(d.aS);const csc=avg(d.cS);
+    const ra=avg(d.ruth);const asc=avg(d.aS);const csc=avg(d.cS);
     return `<tr>
       <td style="font-weight:500">${doc}</td><td>${d.n}</td>
       <td><span class="badge ${tp!=null&&tp>=80?'bg':tp!=null?'by':''}">${tp!=null?tp+' %':'—'}</span></td>
       <td>${ra!=null?`<span style="color:var(--accent2)">${f1(ra)}</span>`:'—'}</td>
-      <td style="color:${aa!=null?(aa>=0?'var(--success)':'var(--danger)'):'var(--muted)'}">${aa!=null?(aa>=0?'+':'')+f2(aa):'—'}</td>
       <td>${asc!=null?`<span class="score ${sc(Math.round(asc))}">${f1(asc)}</span>`:'—'}</td>
       <td>${csc!=null?`<span class="score ${sc(Math.round(csc))}">${f1(csc)}</span>`:'—'}</td>
       <td><span class="badge ${d.comps>0?'br':'bg'}">${d.comps}</span></td>
@@ -724,14 +701,12 @@ function renderDocProfile(){
 
   // Procedure log
   document.getElementById('d-proc-log').innerHTML=recs.map(r=>{
-    const abiDelta=r.abi_pre!=null&&r.abi_post!=null?r.abi_post-r.abi_pre:null;
     const hasComp=r.complications&&r.complications.filter(c=>c!=='Žiadne').length>0;
     return `<tr>
       <td style="color:var(--muted);white-space:nowrap">${r.date||'—'}</td>
       <td style="font-size:11px;max-width:120px">${r.procedure_type||'—'}</td>
       <td>${r.rutherford!=null?`<span style="color:var(--accent2);font-weight:600">${r.rutherford}</span>`:'—'}</td>
       <td style="font-size:11px">${r.anatomy?r.anatomy.split(' ')[0]:'—'}</td>
-      <td style="color:${abiDelta!=null?(abiDelta>=0?'var(--success)':'var(--danger)'):'var(--muted)'}">${abiDelta!=null?(abiDelta>=0?'+':'')+abiDelta.toFixed(2):'—'}</td>
       <td>${r.access_score?`<span class="score ${sc(r.access_score)}">${r.access_score}</span>`:'—'}</td>
       <td>${r.closure_score?`<span class="score ${sc(r.closure_score)}">${r.closure_score}</span>`:'—'}</td>
       <td>${r.technical_success===true?`<span class="badge bg">✓</span>`:r.technical_success===false?`<span class="badge br">✕</span>`:'—'}</td>
@@ -746,7 +721,7 @@ function drawCongress(){
   document.getElementById('cong-date').textContent=`Generované: ${now} · n = ${filtered.length} procedúr`;
   buildTable1();buildKeyStats();
   drawCUSUM_c();drawSAnat();drawSRuth();
-  drawABI_c();drawABIAnat();drawPtime();drawClosure_c();
+  drawPtime();drawClosure_c();
   buildTable2();
 }
 
@@ -758,8 +733,6 @@ function buildTable1(){
   const cS=filtered.map(r=>r.closure_score).filter(Boolean);
   const pt=filtered.map(r=>r.puncture_time_min).filter(Boolean);
   const rv=filtered.map(r=>r.rutherford).filter(v=>v!=null);
-  const ap=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
-  const diffs=ap.map(r=>r.abi_post-r.abi_pre);
   const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
   const clOk=filtered.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;
   const clN=filtered.filter(r=>r.closure_result).length;
@@ -782,10 +755,6 @@ function buildTable1(){
     {l:'Skóre vpich — priemer ± SD',v:aS.length?`${f1(avg(aS))} ± ${f1(sdv(aS))}`:'—'},
     {s:'Uzáver'},
     {l:'Skóre uzáver — priemer ± SD',v:cS.length?`${f1(avg(cS))} ± ${f1(sdv(cS))}`:'—'},
-    {s:'Hemodynamický výsledok'},
-    {l:'ABI pred — priemer ± SD',v:ap.length?`${f2(avg(ap.map(r=>r.abi_pre)))} ± ${f2(sdv(ap.map(r=>r.abi_pre)))}`:'—'},
-    {l:'ABI po — priemer ± SD',v:ap.length?`${f2(avg(ap.map(r=>r.abi_post)))} ± ${f2(sdv(ap.map(r=>r.abi_post)))}`:'—'},
-    {l:'△ ABI — priemer ± SD',v:diffs.length?`${(avg(diffs)>=0?'+':'')+f2(avg(diffs))} ± ${f2(sdv(diffs))}`:'—'},
   ];
   document.getElementById('c-table1').innerHTML=`<thead><tr><th style="width:55%">Parameter</th><th>Hodnota</th></tr></thead><tbody>${rows.map(r=>r.s?`<tr class="sec-row"><td colspan="2">${r.s}</td></tr>`:`<tr><td style="color:var(--muted)">${r.l}</td><td style="font-weight:500">${r.v}</td></tr>`).join('')}</tbody>`;
 }
@@ -796,11 +765,9 @@ function buildKeyStats(){
   const ok=filtered.filter(r=>r.technical_success===true).length;
   const tp=withTS.length?pct(ok,withTS.length):null;
   const comps=filtered.filter(r=>r.complications&&r.complications.length&&!r.complications.includes('Žiadne'));
-  const diffs=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre);
   document.getElementById('c-key').innerHTML=`
     <div class="stat-box"><div class="big green">${tp!=null?tp+'%':'—'}</div><div class="slbl">Technický úspech</div><div class="sci">${withTS.length?ci95(tp,withTS.length):''}</div></div>
-    <div class="stat-box"><div class="big red">${n?pct(comps.length,n)+'%':'—'}</div><div class="slbl">Miera komplikácií</div><div class="sci">${n?ci95(pct(comps.length,n),n):''}</div></div>
-    <div class="stat-box"><div class="big orange">${avg(diffs)!=null?(avg(diffs)>=0?'+':'')+avg(diffs).toFixed(2):'—'}</div><div class="slbl">Priemer △ ABI</div><div class="sci">${diffs.length?`n = ${diffs.length} pacientov`:''}</div></div>`;
+    <div class="stat-box"><div class="big red">${n?pct(comps.length,n)+'%':'—'}</div><div class="slbl">Miera komplikácií</div><div class="sci">${n?ci95(pct(comps.length,n),n):''}</div></div>`;
 }
 
 function drawCUSUM_c(){
@@ -825,18 +792,6 @@ function drawSRuth(){
   mk('c-sruth',{type:'bar',data:{labels:['R 0–1','R 2–3','R 4–6'],datasets:[{data:r,backgroundColor:[C.green(.8),C.orange(.8),C.red(.8)],borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}},plugins:{legend:{display:false}}}});
 }
 
-function drawABI_c(){
-  const ap=filtered.filter(r=>r.abi_pre!=null&&r.abi_post!=null);
-  const pm=avg(ap.map(r=>r.abi_pre)),pom=avg(ap.map(r=>r.abi_post));
-  const ps=sdv(ap.map(r=>r.abi_pre)),pos=sdv(ap.map(r=>r.abi_post));
-  mk('c-abi',{type:'bar',data:{labels:['Pred výkonom','Po výkone'],datasets:[{data:[pm,pom],backgroundColor:[C.muted(.6),C.green(.8)],borderRadius:8,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:1.3,grid:{color:'#2a3050'},title:{display:true,text:'ABI',color:'#718096'}},x:{grid:{display:false}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:i=>`${f2(i.raw)} ± ${f2(i.dataIndex===0?ps:pos)} SD`}}}}});
-}
-
-function drawABIAnat(){
-  const an=['Aortoiliakálna','Femoropopliiteálna','Infraplopliteálna','Kombinovaná (multi-level)'];
-  const d=an.map(a=>avg(filtered.filter(r=>r.anatomy===a&&r.abi_pre!=null&&r.abi_post!=null).map(r=>r.abi_post-r.abi_pre)));
-  mk('c-abi-anat',{type:'bar',data:{labels:an.map(a=>a.split(' ')[0]),datasets:[{data:d,backgroundColor:d.map(v=>v==null?C.muted(.3):v>=0?C.green(.8):C.red(.8)),borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},title:{display:true,text:'△ ABI',color:'#718096'}},x:{grid:{display:false}}},plugins:{legend:{display:false}}}});
-}
 
 function drawPtime(){
   const s=[...filtered].filter(r=>r.puncture_time_min&&r.date).sort((a,b)=>a.date.localeCompare(b.date));

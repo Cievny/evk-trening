@@ -266,16 +266,7 @@
             <option>Kombinovaná (multi-level)</option>
           </select>
         </div>
-        <div class="row2">
-          <div class="field">
-            <label>ABI pred výkonom</label>
-            <input type="number" id="f-abi-pre" min="0" max="2" step="0.01" placeholder="napr. 0.45">
-          </div>
-          <div class="field">
-            <label>ABI po výkone</label>
-            <input type="number" id="f-abi-post" min="0" max="2" step="0.01" placeholder="napr. 0.85">
-          </div>
-        </div>
+
         <div class="field">
           <label>Typ lézie / crossing</label>
           <select id="f-lesion">
@@ -612,8 +603,6 @@ document.getElementById('procForm').addEventListener('submit', async function(e)
     procedure_type: document.getElementById('f-type').value || null,
     rutherford: getRadio('rutherford') ? parseInt(getRadio('rutherford')) : null,
     anatomy: document.getElementById('f-anatomy').value || null,
-    abi_pre: document.getElementById('f-abi-pre').value ? parseFloat(document.getElementById('f-abi-pre').value) : null,
-    abi_post: document.getElementById('f-abi-post').value ? parseFloat(document.getElementById('f-abi-post').value) : null,
     lesion_type: document.getElementById('f-lesion').value || null,
     interventions: getChecks('interventions'),
     technical_success: tsVal === null ? null : tsVal === 'true',
@@ -719,7 +708,7 @@ function render() {
   }
   c.innerHTML = `<div class="table-wrap"><table>
     <thead><tr>
-      <th>Dátum</th><th>Typ</th><th>Ruth.</th><th>Anatómia</th><th>ABI</th>
+      <th>Dátum</th><th>Typ</th><th>Ruth.</th><th>Anatómia</th>
       <th>Prístup</th><th>Uzavretie</th><th>Úspech</th><th>FB</th><th></th>
     </tr></thead>
     <tbody>
@@ -728,12 +717,6 @@ function render() {
       <td style="font-size:11px;max-width:120px">${r.procedure_type||'—'}</td>
       <td>${r.rutherford != null ? `<span class="ruth-badge">${r.rutherford}</span>` : '—'}</td>
       <td style="font-size:11px">${r.anatomy ? r.anatomy.split(' ')[0] : '—'}</td>
-      <td style="font-size:11px;white-space:nowrap">
-        ${r.abi_pre != null ? `<span style="color:var(--muted)">${r.abi_pre}</span>` : ''}
-        ${r.abi_pre != null && r.abi_post != null ? ' → ' : ''}
-        ${r.abi_post != null ? `<span style="color:var(--success)">${r.abi_post}</span>` : ''}
-        ${r.abi_pre == null && r.abi_post == null ? '—' : ''}
-      </td>
       <td>
         ${r.access_score ? `<span class="score ${scoreClass(r.access_score)}">${r.access_score}</span>` : '—'}
         ${r.puncture_time_min ? `<span style="color:var(--muted);font-size:10px;margin-left:3px">${r.puncture_time_min}m</span>` : ''}
@@ -769,9 +752,9 @@ function updateStats() {
 
 function exportCSV() {
   if (!records.length) { showToast('Žiadne záznamy'); return; }
-  const h = ['Dátum','Operatér','Procedúra','Rutherford','Anatómia','ABI pred','ABI po','Lézia','Intervencie','Tech.úspech','Komplikácie','Prístup','Metóda','Čas punkcie','Skóre prístupu','Uzavretie','Výsledok','Skóre uzavretia','Extras','Poznámky','Spätná väzba'];
+  const h = ['Dátum','Operatér','Procedúra','Rutherford','Anatómia','Lézia','Intervencie','Tech.úspech','Komplikácie','Prístup','Metóda','Čas punkcie','Skóre prístupu','Uzavretie','Výsledok','Skóre uzavretia','Extras','Poznámky','Spätná väzba'];
   const rows = records.map(r => [
-    r.date, r.doctor, r.procedure_type, r.rutherford, r.anatomy, r.abi_pre, r.abi_post,
+    r.date, r.doctor, r.procedure_type, r.rutherford, r.anatomy,
     r.lesion_type, (r.interventions||[]).join('; '), r.technical_success, (r.complications||[]).join('; '),
     r.side, r.method, r.puncture_time_min, r.access_score,
     r.closure_type, r.closure_result, r.closure_score,
