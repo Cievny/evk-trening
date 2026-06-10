@@ -262,6 +262,11 @@ select.doc-select{
     <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--success)"></div><h2>Intervencie</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-iv"></canvas></div></div></div>
     <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--danger)"></div><h2>Komplikácie</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-comp"></canvas></div></div></div>
   </div>
+  <div class="g3">
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--purple,#9f7aea)"></div><h2>Technika vpichu</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-technique"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent)"></div><h2>Miesto vpichu (artéria)</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-side"></canvas></div></div></div>
+    <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Pozícia USG sondy</h2></div></div><div class="panel-body"><div class="ch"><canvas id="ch-usg"></canvas></div></div></div>
+  </div>
   <div class="g2">
     <div class="panel" style="grid-column:1/-1"><div class="panel-header"><div class="ph-left"><div class="dot"></div><h2>Uzatváracie zariadenia</h2></div></div><div class="panel-body"><div class="ch-md"><canvas id="ch-closure"></canvas></div></div></div>
   </div>
@@ -326,6 +331,13 @@ select.doc-select{
     <div class="g2">
       <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Rutherford distribúcia</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-ruth"></canvas></div></div></div>
       <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Anatomické lokality</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-anat"></canvas></div></div></div>
+    </div>
+
+    <!-- Vpich detail -->
+    <div class="g3">
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--purple,#9f7aea)"></div><h2>Technika vpichu</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-technique"></canvas></div></div></div>
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent)"></div><h2>Miesto vpichu (artéria)</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-side"></canvas></div></div></div>
+      <div class="panel"><div class="panel-header"><div class="ph-left"><div class="dot" style="background:var(--accent2)"></div><h2>Pozícia USG sondy</h2></div></div><div class="panel-body"><div class="ch"><canvas id="d-usg"></canvas></div></div></div>
     </div>
 
     <!-- vs Group avg -->
@@ -537,6 +549,13 @@ function drawDash(){
   // Closure device
   const devs=[...new Set(filtered.map(r=>r.closure_type).filter(Boolean))];
   mk('ch-closure',{type:'bar',data:{labels:devs,datasets:[{data:devs.map(d=>{const rs=filtered.filter(r=>r.closure_type===d);const ok=rs.filter(r=>r.closure_result==='Úspešné'||r.closure_result==='Ihneď').length;return rs.length?Math.round(ok/rs.length*100):0;}),backgroundColor:PAL,borderRadius:6,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'#2a3050'},ticks:{callback:v=>v+'%'}},x:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}});
+
+  // Technika vpichu (Prográdna / Retrográdna)
+  drawTechniqueChart('ch-technique', filtered);
+  // Miesto vpichu (artéria)
+  drawSideChart('ch-side', filtered);
+  // USG sonda
+  drawUsgChart('ch-usg', filtered);
 }
 
 function drawDoctorTable(){
@@ -681,6 +700,11 @@ function renderDocProfile(){
     {label:'Skupina',data:[(gAvgAS/10)*100,(gAvgCS/10)*100,gAllTSPct,normPT(gPTAvg),gCompRate],borderColor:C.muted(.8),backgroundColor:C.muted(.1),pointBackgroundColor:C.muted(.8),borderWidth:2,borderDash:[4,4]}
   ]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'#2a3050'},pointLabels:{color:'#e2e8f0',font:{size:11}}}},plugins:{legend:{labels:{color:'#e2e8f0'}}}}});
 
+  // Vpich detail charts (doctor)
+  drawTechniqueChart('d-technique', recs);
+  drawSideChart('d-side', recs);
+  drawUsgChart('d-usg', recs);
+
   // Feedback timeline
   const fbRecs=recs.filter(r=>r.feedback).reverse();
   document.getElementById('d-feedback-list').innerHTML=fbRecs.length
@@ -750,6 +774,11 @@ function buildTable1(){
     {l:'Peri-procedurálne komplikácie',v:`${comps.length}/${n} (${pct(comps.length,n)} %)`},
     {l:'Úspešné uzavretie',v:clN?`${clOk}/${clN} (${pct(clOk,clN)} %)`:'—'},
     {s:'Vaskulárny prístup'},
+    {l:'Prográdna technika',v:(()=>{const pg=filtered.filter(r=>r.technique==='Prográdna').length;return n?`${pg}/${n} (${pct(pg,n)} %)`:'—';})()},
+    {l:'Retrográdna technika',v:(()=>{const rg=filtered.filter(r=>r.technique==='Retrográdna').length;return n?`${rg}/${n} (${pct(rg,n)} %)`:'—';})()},
+    {l:'USG-navádzaný vpich',v:(()=>{const us=filtered.filter(r=>r.method&&r.method.includes('USG')).length;return n?`${us}/${n} (${pct(us,n)} %)`:'—';})()},
+    {l:'Pozícia sondy — long-axis',v:(()=>{const la=filtered.filter(r=>r.usg_position&&r.usg_position.includes('long')).length;const usgN=filtered.filter(r=>r.usg_position).length;return usgN?`${la}/${usgN} (${pct(la,usgN)} %)`:'—';})()},
+    {l:'Pozícia sondy — short-axis',v:(()=>{const sa=filtered.filter(r=>r.usg_position&&r.usg_position.includes('short')).length;const usgN=filtered.filter(r=>r.usg_position).length;return usgN?`${sa}/${usgN} (${pct(sa,usgN)} %)`:'—';})()},
     {l:'Čas punkcie — priemer ± SD (min)',v:pt.length?`${f1(avg(pt))} ± ${f1(sdv(pt))}`:'—'},
     {l:'Čas punkcie — medián (min)',v:pt.length?`${[...pt].sort((a,b)=>a-b)[Math.floor(pt.length/2)]}`:'—'},
     {l:'Skóre vpich — priemer ± SD',v:aS.length?`${f1(avg(aS))} ± ${f1(sdv(aS))}`:'—'},
@@ -768,6 +797,30 @@ function buildKeyStats(){
   document.getElementById('c-key').innerHTML=`
     <div class="stat-box"><div class="big green">${tp!=null?tp+'%':'—'}</div><div class="slbl">Technický úspech</div><div class="sci">${withTS.length?ci95(tp,withTS.length):''}</div></div>
     <div class="stat-box"><div class="big red">${n?pct(comps.length,n)+'%':'—'}</div><div class="slbl">Miera komplikácií</div><div class="sci">${n?ci95(pct(comps.length,n),n):''}</div></div>`;
+}
+
+// ===== VPICH DETAIL CHARTS (shared) =====
+function drawTechniqueChart(id, data){
+  const labels=['Prográdna','Retrográdna'];
+  const counts=labels.map(l=>data.filter(r=>r.technique===l).length);
+  const total=counts.reduce((a,b)=>a+b,0);
+  if(!total){mk(id,{type:'doughnut',data:{labels:['Bez dát'],datasets:[{data:[1],backgroundColor:['#2a3050'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});return;}
+  mk(id,{type:'doughnut',data:{labels,datasets:[{data:counts,backgroundColor:[C.teal(.85),C.purple(1)],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e2e8f0',boxWidth:10,font:{size:10}}},tooltip:{callbacks:{label:i=>`${i.label}: ${i.raw} (${total?Math.round(i.raw/total*100):0} %)`}}}}});
+}
+
+function drawSideChart(id, data){
+  const sides=[...new Set(data.map(r=>r.side).filter(Boolean))].sort();
+  if(!sides.length){mk(id,{type:'bar',data:{labels:['Bez dát'],datasets:[{data:[0],backgroundColor:[C.muted(.3)],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});return;}
+  const shortLabel=s=>s.replace('femorálna','fem.').replace('popliteálna','pop.').replace('tibiálna','tib.').replace('brachiálna','brach.');
+  mk(id,{type:'bar',data:{labels:sides.map(shortLabel),datasets:[{data:sides.map(s=>data.filter(r=>r.side===s).length),backgroundColor:PAL,borderRadius:5,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{grid:{color:'#2a3050'},ticks:{stepSize:1}},x:{grid:{display:false},ticks:{font:{size:9}}}},plugins:{legend:{display:false}}}});
+}
+
+function drawUsgChart(id, data){
+  const usgData=data.filter(r=>r.usg_position);
+  const labels=[...new Set(usgData.map(r=>r.usg_position))];
+  if(!labels.length){mk(id,{type:'doughnut',data:{labels:['Bez dát'],datasets:[{data:[1],backgroundColor:['#2a3050'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});return;}
+  const shortL=l=>l.replace('Pozdĺžna os (long-axis)','Long-axis').replace('Priečna os (short-axis)','Short-axis').replace('Out-of-plane','Out-of-plane');
+  mk(id,{type:'doughnut',data:{labels:labels.map(shortL),datasets:[{data:labels.map(l=>usgData.filter(r=>r.usg_position===l).length),backgroundColor:[C.orange(.85),C.accent||C.teal(.85),C.green(.8)],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#e2e8f0',boxWidth:10,font:{size:10}}}}}});
 }
 
 function drawCUSUM_c(){

@@ -357,12 +357,21 @@
         <div class="row2">
           <div class="field">
             <label>Navádanie (guidance)</label>
-            <select id="f-method">
+            <select id="f-method" onchange="toggleUsgPos()">
               <option value="">— vybrať —</option>
               <option>USG</option>
               <option>XA (fluoroskopia)</option>
               <option>USG + XA</option>
               <option>Anatomické landmarky</option>
+            </select>
+          </div>
+          <div class="field" id="usg-pos-wrap" style="display:none">
+            <label>Pozícia USG sondy</label>
+            <select id="f-usg-position">
+              <option value="">— vybrať —</option>
+              <option>Pozdĺžna os (long-axis)</option>
+              <option>Priečna os (short-axis)</option>
+              <option>Out-of-plane</option>
             </select>
           </div>
           <div class="field">
@@ -620,6 +629,7 @@ document.getElementById('procForm').addEventListener('submit', async function(e)
     anesthesia: document.getElementById('f-anesthesia').value || null,
     sheath_size: document.getElementById('f-sheath-size').value || null,
     sheath_length: document.getElementById('f-sheath-length').value || null,
+    usg_position: document.getElementById('f-usg-position').value || null,
     catheter: document.getElementById('f-catheter').value || null,
     compression_time: document.getElementById('f-compression-time').value ? parseInt(document.getElementById('f-compression-time').value) : null,
     femostop: document.getElementById('f-femostop').checked || false,
@@ -636,6 +646,7 @@ document.getElementById('procForm').addEventListener('submit', async function(e)
     render(); updateStats();
     this.reset();
     document.getElementById('f-date').valueAsDate = new Date();
+    document.getElementById('usg-pos-wrap').style.display = 'none';
     showToast('Záznam uložený ✓');
   }
   btn.disabled = false; btn.textContent = '＋ Uložiť záznam';
@@ -774,6 +785,15 @@ function showToast(msg, isError=false) {
   t.className = 'toast' + (isError?' error':'');
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+function toggleUsgPos() {
+  const m = document.getElementById('f-method').value;
+  const wrap = document.getElementById('usg-pos-wrap');
+  wrap.style.display = (m === 'USG' || m === 'USG + XA') ? 'block' : 'none';
+  if (!wrap.style.display || wrap.style.display === 'none') {
+    document.getElementById('f-usg-position').value = '';
+  }
 }
 
 document.getElementById('f-date').valueAsDate = new Date();
